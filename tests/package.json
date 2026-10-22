@@ -1,0 +1,12 @@
+{
+  "name": "rekursion-und-listen-tests",
+  "private": true,
+  "description": "Browser smoke test for the built course in ../docs",
+  "scripts": {
+    "test": "node smoke.js",
+    "test:python": "node smoke.js --python"
+  },
+  "devDependencies": {
+    "playwright": "^1.56.1"
+  }
+}

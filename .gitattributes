@@ -1,0 +1,5 @@
+# keep Windows line endings for the batch file and Unix ones for the shell starter
+*.bat text eol=crlf
+*.command text eol=lf
+*.sh text eol=lf
+*.wasm binary

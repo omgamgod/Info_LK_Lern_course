@@ -1,0 +1,3 @@
+# Needed to build the course (src/build.py). The course itself needs nothing.
+Markdown>=3.4
+PyYAML>=6.0

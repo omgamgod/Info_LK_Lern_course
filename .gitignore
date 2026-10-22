@@ -1,0 +1,17 @@
+# build output used only by validate.py
+.build/
+
+# Python
+__pycache__/
+*.pyc
+
+# tests
+tests/node_modules/
+tests/*.png
+shot.png
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
