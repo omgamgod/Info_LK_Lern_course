@@ -14,15 +14,16 @@ goals:
 
 ## [intro] Was der Kurs abdeckt
 
-Der Kurs behandelt die ersten beiden Kapitel deines Q12-Informatikkurses **26/28 2INF1**:
+Der Kurs behandelt die ersten drei Kapitel deines Q12-Informatikkurses **26/28 2INF1**:
 
 | Kapitel | Themen in deinem Kurs | Lektionen hier |
 |---|---|---|
 | **I Rekursion** | 1 Konzept · 2 Backtracking · 3 Tiefensuche · 4 Anwendungen der Tiefensuche: Optimale Lösungen | B1 – B4 |
-| **II Listen** | 1 Warteschlange · 2 Trennung von Struktur und Daten · 3 Einfach verkettete Liste · 4 Entwurfsmuster Kompositum | C1 – C4 |
-| **Klausurvorbereitung** | Spickzettel und Glossar · gemischte Aufgaben über beide Kapitel · eine vollständige Probeklausur (60 Punkte, 90 Minuten) mit Musterlösungen | D1 – D3 |
+| **II Listen** | 1 Warteschlange · 2 Trennung von Struktur und Daten · 3 Einfach verkettete Liste · 4 Entwurfsmuster Kompositum · 5 Stapel | C1 – C5 |
+| **III Bäume** | 1 Datenstruktur Baum · 2 Suchen und Einfügen · 3 Binärbaum implementieren | D1 – D3 |
+| **Klausurvorbereitung** | Spickzettel und Glossar · gemischte Aufgaben über alle Kapitel · zwei vollständige Probeklausuren (Rekursion und Listen; Stapel und Bäume) mit Musterlösungen | E1 – E4 |
 
-Deine Lehrkraft implementiert alles in **Python**, deshalb auch dieser Kurs. Weil du in Python bei null anfängst, bringt dir **Teil A** zuerst genau das Python bei, das du brauchst: nicht mehr, aber auch nichts zu wenig. Jedes Python-Thema in Teil A ist da, weil eine spätere Lektion darauf aufbaut. Die Chips *Baut auf* und *Wird gebraucht für* oben in jeder Lektion zeigen diese Verbindungen. **Teil D** führt alles für die Klausur zusammen.
+Deine Lehrkraft implementiert alles in **Python**, deshalb auch dieser Kurs. Weil du in Python bei null anfängst, bringt dir **Teil A** zuerst genau das Python bei, das du brauchst: nicht mehr, aber auch nichts zu wenig. Jedes Python-Thema in Teil A ist da, weil eine spätere Lektion darauf aufbaut. Die Chips *Baut auf* und *Wird gebraucht für* oben in jeder Lektion zeigen diese Verbindungen. **Teil E** führt alles für die Klausur zusammen.
 
 :::key title="Die Idee hinter dem Kurs"
 Einen Algorithmus verstehen und ihn in Python schreiben sind zwei verschiedene Fähigkeiten. Zuerst lernst du die **Logik** (was passiert und warum), ganz ohne Code. Dann siehst du, wie jeder Schritt der Logik zu einer Zeile Python wird. Erst danach schreibst du den Code selbst.
@@ -98,5 +99,5 @@ Die **Fachbegriffe** deines Kurses sind fett gedruckt, wenn sie zum ersten Mal v
 Der gesamte Code verwendet die **Namen aus deinen Kursvorlagen**: `KnotenBesuchen`, `NachfolgerGeben`, `HintenEinfügen`, `self.anfang` … Python erlaubt Umlaute in Namen, und die Vorlagen deiner Lehrkraft nutzen sie auch. Deshalb siehst du in deinem Kursmaterial sowohl `HintenEinfügen` als auch `HintenEinfuegen`. Beides ist in Ordnung, solange du eine Schreibweise einheitlich verwendest.
 
 :::tip title="Empfohlener Weg"
-Wenn Python neu für dich ist, arbeite Teil A der Reihe nach durch: Jede Lektion dauert 30 bis 60 Minuten. Wenn du schon etwas Python kannst, mach die Python-Blöcke von Teil A als schnellen Test und lies nur dort nach, wo etwas schiefgeht. Die Teile B und C bauen direkt auf Teil A auf.
+Wenn Python neu für dich ist, arbeite Teil A der Reihe nach durch: Jede Lektion dauert 30 bis 60 Minuten. Wenn du schon etwas Python kannst, mach die Python-Blöcke von Teil A als schnellen Test und lies nur dort nach, wo etwas schiefgeht. Die Teile B, C und D bauen direkt auf Teil A auf, und Teil D (Bäume) verbindet Rekursion aus Teil B mit dem Kompositum aus Teil C.
 :::

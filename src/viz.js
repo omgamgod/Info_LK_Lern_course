@@ -175,7 +175,7 @@
         const cur = s.depth === d;
         svg.append(S('rect', { x, y, width: w, height: 30, rx: 7, fill: returned[d] ? 'var(--green-soft)' : cur ? 'var(--blue-soft)' : 'var(--sheet)', stroke: returned[d] ? 'var(--green)' : cur ? 'var(--blue)' : 'var(--ink)', 'stroke-width': cur ? 2.2 : 1.3 }));
         svg.append(T(x + w / 2, y + 15.5, label, { mono: true, size: 13, anchor: 'middle', weight: 700 }));
-        const pendTxt = F.base(args) ? '= ' + F.baseVal(args) + '   (base case)' : '= ' + F.pend(args);
+        const pendTxt = F.base(args) ? '= ' + F.baseVal(args) + '   (Rekursionsende)' : '= ' + F.pend(args);
         svg.append(T(x + w + 12, y + 15.5, returned[d] ? '= ' + results[d] : pendTxt, { mono: true, size: 13, fill: returned[d] ? 'var(--green)' : 'var(--ink-2)', weight: returned[d] ? 700 : 400 }));
         if (d > 0) svg.append(S('path', { d: `M${x - 34 + 14},${y - rowH + 30} v${rowH - 30 + 15 - 15} q0,15 14,15`, fill: 'none', stroke: 'var(--blue)', 'stroke-width': 1.5, 'marker-end': mk }));
         if (d > 0 && returned[d]) svg.append(T(x - 6, y - 8, '↑ ' + results[d], { hand: true, size: 18, anchor: 'end', fill: 'var(--green)' }));
@@ -1191,5 +1191,698 @@
     void isEnd; void varsEl;
   }
 
-  window.Viz = { recstack, hanoi, levy, queens, knapsack, sudoku, graphwalk, paths, maze, listops };
+  // ------------------------------------------------------------------ Stapel (stack): ablegen/herunternehmen, Aufrufstapel, Klammerprüfung
+  function stack(host, cfg) {
+    const { el, esc } = U();
+    const mode = cfg.mode || 'ops';
+    const titles = { ops: 'Stapel: VorneEinfügen und AnfangEntfernen', vergleich: 'Stapel und Warteschlange mit denselben Daten', calls: 'Der Aufrufstapel bei LängeGeben()', brackets: 'Klammern prüfen mit einem Stapel' };
+    const ui = shell(host, cfg.title || titles[mode], { side: mode === 'calls' || mode === 'brackets' });
+    const box = (t, cls, sub) => el('div', { class: 'sv-box' + (cls ? ' ' + cls : '') }, t, sub ? el('small', null, sub) : null);
+    function pile(items, opts = {}) {
+      const p = el('div', { class: 'sv-pile' + (opts.q ? ' q' : '') });
+      if (!items.length) p.append(el('div', { class: 'sv-empty' }, 'leer'));
+      items.forEach((it, k) => {
+        const top = opts.q ? k === 0 : k === items.length - 1;
+        p.append(box(it.t, (top ? 'top' : '') + (it.cls ? ' ' + it.cls : ''), it.sub));
+      });
+      return p;
+    }
+    function chain(names, label) {
+      const c = el('div', { class: 'sv-chain' });
+      c.append(el('span', { class: 'o' }, label), el('span', { class: 'ar' }, '—liste→'), el('span', { class: 'o' }, ':LISTE'), el('span', { class: 'ar' }, '—anfang→'));
+      names.forEach((n, k) => { c.append(el('span', { class: 'o' + (k === 0 ? ' hl' : '') }, ':KNOTEN ' + n), el('span', { class: 'ar' }, '→')); });
+      c.append(el('span', { class: 'o a' }, ':ABSCHLUSS'));
+      return c;
+    }
+
+    if (mode === 'ops' || mode === 'vergleich') {
+      const cmp = mode === 'vergleich';
+      let st = (cfg.init || ['Andi', 'Bert']).slice();
+      let qu = st.slice();
+      let out = [];
+      let qout = [];
+      let last = null;
+      const nameIn = el('input', { type: 'text', value: cfg.next || 'Clara', size: '8', 'aria-label': 'Daten' });
+      const bPush = el('button', { class: 'btn primary' }, cmp ? 'Einfügen' : 'VorneEinfügen (ablegen)');
+      const bPop = el('button', { class: 'btn' }, cmp ? 'Entfernen' : 'AnfangEntfernen (herunternehmen)');
+      const bReset = el('button', { class: 'btn ghost' }, 'Zurücksetzen');
+      ui.ctrl.append(el('label', null, 'Daten', nameIn), bPush, bPop, bReset);
+      const names = ['Dora', 'Emil', 'Fritz', 'Gina', 'Hanna', 'Ida', 'Jonas', 'Kim', 'Lea', 'Mia'];
+      let ni = 0;
+      function draw() {
+        ui.stage.innerHTML = '';
+        const wrap = el('div', { class: 'sv-wrap' });
+        const sItems = st.map((t, k) => ({ t, cls: last && last.kind === 'push' && k === st.length - 1 ? 'new' : '' }));
+        wrap.append(el('div', { class: 'sv-col' }, el('h6', null, 'Stapel (LIFO)'), el('div', { style: 'font-size:12px;color:var(--blue)' }, '↓ oben: hier wird abgelegt und heruntergenommen'), pile(sItems)));
+        if (cmp) {
+          const qItems = qu.map((t, k) => ({ t, cls: last && last.kind === 'push' && k === qu.length - 1 ? 'new' : '' }));
+          wrap.append(el('div', { class: 'sv-col' }, el('h6', null, 'Warteschlange (FIFO)'), el('div', { style: 'font-size:12px;color:var(--blue)' }, '← vorne raus · hinten rein ←'), pile(qItems, { q: true })));
+        }
+        ui.stage.append(wrap);
+        ui.stage.append(el('div', { style: 'margin-top:16px' }, el('div', { style: 'font-size:12px;color:var(--ink-3);text-align:center;margin-bottom:4px' }, 'So sieht der Stapel als Objekte aus: Er nutzt eine Liste (Kompositum), das oberste Element ist der erste Knoten.'), chain(st.slice().reverse(), 'stapel: STAPEL')));
+        const outs = el('div', { class: 'sv-out', style: 'margin-top:12px;text-align:center' }, 'Heruntergenommen (Stapel): ', out.length ? out.join(', ') : '–');
+        ui.stage.append(outs);
+        if (cmp) ui.stage.append(el('div', { class: 'sv-out', style: 'text-align:center' }, 'Entfernt (Warteschlange): ', qout.length ? qout.join(', ') : '–'));
+        let txt = cmp ? 'Beide Strukturen bekommen dieselben Daten in derselben Reihenfolge. Drück mehrmals <b>Entfernen</b> und vergleiche die Reihenfolgen.' : 'Leg Elemente ab und nimm sie wieder herunter. Achte darauf, welches Element jeweils herauskommt.';
+        if (last && last.kind === 'push') txt = cmp ? `„${esc(last.v)}“ kommt in den Stapel nach <b>oben</b> (VorneEinfügen) und in die Warteschlange nach <b>hinten</b> (HintenEinfügen).` : `<code>stapel.VorneEinfügen(${esc(last.v)})</code>: Der Stapel ruft <code>liste.VorneEinfügen(…)</code> auf. „${esc(last.v)}“ liegt jetzt oben, alle anderen darunter.`;
+        if (last && last.kind === 'pop') txt = last.v == null ? 'Der Stapel ist leer: <code>AnfangEntfernen()</code> gibt <b>nichts</b> zurück (der ABSCHLUSS liefert None).' : cmp ? `Der Stapel gibt <b>${esc(last.v)}</b> zurück (das zuletzt abgelegte Element), die Warteschlange <b>${esc(last.q)}</b> (das am längsten wartende).` : `<code>stapel.AnfangEntfernen()</code> gibt <b>${esc(last.v)}</b> zurück, das zuletzt abgelegte Element: <b>last in, first out</b>.`;
+        ui.info.innerHTML = txt;
+      }
+      bPush.addEventListener('click', () => {
+        const v = nameIn.value.trim() || names[ni % names.length];
+        st.push(v); qu.push(v);
+        last = { kind: 'push', v };
+        nameIn.value = names[(ni++) % names.length];
+        draw();
+      });
+      bPop.addEventListener('click', () => {
+        const v = st.length ? st.pop() : null;
+        const q = qu.length ? qu.shift() : null;
+        if (v != null) out.push(v);
+        if (q != null) qout.push(q);
+        last = { kind: 'pop', v, q };
+        draw();
+      });
+      bReset.addEventListener('click', () => { st = (cfg.init || ['Andi', 'Bert']).slice(); qu = st.slice(); out = []; qout = []; last = null; draw(); });
+      draw();
+      return;
+    }
+
+    // scripted modes: a list of steps, each with the current stack
+    const stepsEl = el('div');
+    const stackEl = el('div', { class: 'stack' });
+    let steps = [];
+    if (mode === 'calls') {
+      const cb = codeBox(cfg.code || ['# Liste', 'def LaengeGeben(self):', '    return self.anfang.RestlaengeGeben()', '# Knoten', 'def RestlaengeGeben(self):', '    if self.nachfolger is None:', '        return 1', '    return 1 + self.nachfolger.RestlaengeGeben()']);
+      ui.panel.append(el('h5', null, 'Code (Liste aus C3)'), cb.box, el('h5', null, 'Aufrufstapel'), stackEl);
+      const objs = cfg.objs || ['knoten1', 'knoten2', 'knoten3'];
+      const fr = [];
+      const S1 = (text, line, extra) => steps.push({ frames: fr.map((f) => ({ ...f })), text, line, ...extra });
+      fr.push({ t: 'liste.LängeGeben()', sub: 'objekt: liste · wartet auf anfang' });
+      S1('Der Aufrufer ruft <b>liste.LängeGeben()</b> auf. Der Aufruf kommt als erster Baustein auf den Stapel: gespeichert werden das Objekt (liste), die Stelle im Programm und die lokalen Variablen.', 2, { act: -1 });
+      objs.forEach((o, k) => {
+        fr.push({ t: o + '.RestlängeGeben()', sub: 'objekt: ' + o + (k < objs.length - 1 ? ' · wartet auf Nachfolger' : '') });
+        S1(`${k === 0 ? 'liste' : objs[k - 1]} ruft <b>${o}.RestlängeGeben()</b> auf und <i>wartet</i>. Der neue Aufruf liegt oben auf dem Stapel; nur der oberste Aufruf arbeitet, alle darunter sind inaktiv.`, k === objs.length - 1 ? 5 : 7, { act: k });
+      });
+      S1(`${objs[objs.length - 1]} hat keinen Nachfolger: <b>Abbruchbedingung erreicht</b>. Er gibt 1 zurück. Ab jetzt wird der Stapel abgebaut.`, 6, { act: objs.length - 1 });
+      for (let k = objs.length - 1; k >= 0; k--) {
+        const val = objs.length - k;
+        fr.pop();
+        if (k > 0) S1(`Der Aufruf von ${objs[k]} wird <b>vom Stapel geholt</b>. ${objs[k - 1]} ist wieder oben, setzt an der gespeicherten Stelle fort und rechnet 1 + ${val} = <b>${val + 1}</b>.`, 7, { act: k - 1 });
+        else S1(`Der Aufruf von ${objs[0]} wird vom Stapel geholt. liste ist wieder oben und gibt das übergebene Ergebnis <b>${objs.length}</b> zurück.`, 2, { act: -1 });
+      }
+      fr.pop();
+      S1(`Auch LängeGeben ist fertig und verschwindet vom Stapel. Der Stapel ist leer, der Aufrufer bekommt <b>${objs.length}</b>.`, -1, { act: null });
+      const st = stepper(ui.ctrl, (i) => {
+        const s = steps[i];
+        cb.hl(s.line);
+        stackEl.innerHTML = '';
+        s.frames.forEach((f, k) => stackEl.append(el('div', { class: 'fr' + (k === s.frames.length - 1 ? ' top' : '') }, f.t, el('div', { style: 'font-size:11px;color:var(--ink-3)' }, f.sub))));
+        if (!s.frames.length) stackEl.append(el('div', { class: 'sv-empty' }, 'leer'));
+        ui.stage.innerHTML = '';
+        const c = el('div', { class: 'sv-chain' });
+        c.append(el('span', { class: 'o' + (s.act === -1 ? ' hl' : '') }, 'liste: LISTE'), el('span', { class: 'ar' }, '—anfang→'));
+        objs.forEach((o, k) => c.append(el('span', { class: 'o' + (s.act === k ? ' hl' : '') }, o + ': KNOTEN'), el('span', { class: 'ar' }, k < objs.length - 1 ? '→' : '→ None')));
+        ui.stage.append(c);
+        const wrap = el('div', { class: 'sv-wrap', style: 'margin-top:18px' });
+        wrap.append(el('div', { class: 'sv-col' }, el('h6', null, 'Aufrufstapel (Bauklötze)'), pile(s.frames.map((f) => ({ t: f.t, sub: f.sub })))));
+        ui.stage.append(wrap);
+        ui.info.innerHTML = s.text;
+      });
+      st.reset(steps.length);
+      return;
+    }
+
+    // brackets
+    const exprIn = el('input', { type: 'text', value: cfg.ausdruck || '(3 + [4 * (2 - 1)]) * {5 - 2}', size: '26', 'aria-label': 'Term' });
+    const bGo = el('button', { class: 'btn primary' }, 'Prüfen');
+    const row = el('div', { class: 'viz-ctrl', style: 'border-top:0;border-bottom:1px solid var(--rule)' }, el('label', null, 'Term', exprIn), bGo);
+    host.insertBefore(row, host.children[1]);
+    const cb = codeBox(['für jedes Zeichen z des Terms:', '  falls z öffnende Klammer dann', '    stapel.VorneEinfügen(z)', '  sonst falls z schließende Klammer dann', '    oben = stapel.AnfangEntfernen()', '    falls oben passt nicht zu z dann', '      return falsch', 'return stapel ist leer']);
+    ui.panel.append(el('h5', null, 'Algorithmus'), cb.box, el('h5', null, 'Stapel'), stackEl);
+    const OPEN = '([{';
+    const CLOSE = ')]}';
+    const st = stepper(ui.ctrl, (i) => {
+      const s = steps[i];
+      cb.hl(s.line);
+      stackEl.innerHTML = '';
+      s.stack.forEach((c, k) => stackEl.append(el('div', { class: 'fr' + (k === s.stack.length - 1 ? ' top' : '') }, c)));
+      if (!s.stack.length) stackEl.append(el('div', { class: 'sv-empty' }, 'leer'));
+      ui.stage.innerHTML = '';
+      const ex = el('div', { class: 'sv-expr' });
+      [...s.expr].forEach((c, k) => ex.append(el('span', { class: k === s.pos ? (s.bad ? 'bad' : 'cur') : k < s.pos ? 'done' : '' }, c === ' ' ? ' ' : c)));
+      ui.stage.append(ex);
+      const wrap = el('div', { class: 'sv-wrap' });
+      wrap.append(el('div', { class: 'sv-col' }, el('h6', null, 'Stapel der offenen Klammern'), pile(s.stack.map((t) => ({ t })))));
+      ui.stage.append(wrap);
+      ui.info.innerHTML = s.text;
+    });
+    function build() {
+      const expr = exprIn.value;
+      steps = [];
+      const stk = [];
+      const push = (o) => steps.push({ expr, stack: stk.slice(), ...o });
+      push({ pos: -1, line: -1, text: 'Der Stapel ist zu Beginn leer. Der Term wird Zeichen für Zeichen von links nach rechts gelesen.' });
+      let okFlag = true;
+      for (let k = 0; k < expr.length; k++) {
+        const c = expr[k];
+        if (OPEN.includes(c)) { stk.push(c); push({ pos: k, line: 2, text: `<b>${esc(c)}</b> ist eine öffnende Klammer: auf den Stapel legen. Sie wartet auf ihr Gegenstück.` }); }
+        else if (CLOSE.includes(c)) {
+          const want = OPEN[CLOSE.indexOf(c)];
+          if (!stk.length) { push({ pos: k, line: 4, bad: true, text: `<b>${esc(c)}</b> schließt, aber der Stapel ist <b>leer</b>: Es gibt keine offene Klammer dazu. Der Term ist <b>nicht korrekt</b>.` }); okFlag = false; break; }
+          const top = stk.pop();
+          if (top !== want) { push({ pos: k, line: 6, bad: true, text: `<b>${esc(c)}</b> schließt, oben lag aber <b>${esc(top)}</b>. Die Klammern passen nicht zusammen: <b>nicht korrekt</b>.` }); okFlag = false; break; }
+          push({ pos: k, line: 4, text: `<b>${esc(c)}</b> schließt: Die oberste Klammer <b>${esc(top)}</b> herunternehmen. Sie passt, weiter.` });
+        }
+      }
+      if (okFlag) {
+        if (stk.length) push({ pos: expr.length, line: 7, bad: true, text: `Ende des Terms, aber auf dem Stapel liegen noch <b>${esc(stk.join(' '))}</b>: Diese Klammern wurden nie geschlossen. <b>Nicht korrekt.</b>` });
+        else push({ pos: expr.length, line: 7, text: 'Ende des Terms und der Stapel ist <b>leer</b>: Jede Klammer wurde in der richtigen Reihenfolge geschlossen. Der Term ist <b>korrekt geklammert</b>.' });
+      }
+      st.reset(steps.length);
+    }
+    bGo.addEventListener('click', build);
+    exprIn.addEventListener('keydown', (e) => { if (e.key === 'Enter') build(); });
+    build();
+  }
+
+  // ------------------------------------------------------------------ Cheese-Champions (BWInf 17): Mäuse und Stapel
+  function mice(host, cfg) {
+    const { el, esc } = U();
+    const ui = shell(host, cfg.title || 'Cheese-Champions: Der Seitengang ist ein Stapel', { side: true });
+    const inp = el('input', { type: 'text', value: (cfg.order || [3, 2, 4, 1]).join(', '), size: '24', 'aria-label': 'Reihenfolge am Käse' });
+    const go = el('button', { class: 'btn primary' }, 'Simulieren');
+    const presets = select('Beispiel', [['', '…'], ['3, 2, 4, 1', '3, 2, 4, 1'], ['3, 1, 2', '3, 1, 2'], ['7, 6, 5, 4, 3, 2, 8, 9, 1', 'BWInf a'], ['1, 3, 4, 6, 7, 10, 9, 11, 12, 8, 5, 2', 'BWInf b'], ['4, 5, 3, 1, 2, 6', 'BWInf c']], '');
+    const row = el('div', { class: 'viz-ctrl', style: 'border-top:0;border-bottom:1px solid var(--rule)' }, el('label', null, 'Reihenfolge am Käse', inp), go, presets.label);
+    host.insertBefore(row, host.children[1]);
+    const winsEl = el('div');
+    const stackEl = el('div', { class: 'stack' });
+    ui.panel.append(el('h5', null, 'Rechter Gang = Stapel'), stackEl, el('h5', null, 'Gewonnene Zweikämpfe'), winsEl);
+    let steps = [];
+    function simulate(order) {
+      const n = order.length;
+      const res = [];
+      const waiting = Array.from({ length: n }, (_, k) => k + 1);
+      const stk = [];
+      const out = [];
+      const wins = Array(n + 1).fill(0);
+      const snap = (text, o = {}) => res.push({ waiting: waiting.slice(), stk: stk.slice(), out: out.slice(), wins: wins.slice(), text, ...o });
+      const sorted = order.slice().sort((a, b) => a - b);
+      if (!n || sorted.some((v, k) => v !== k + 1)) { snap('Die Reihenfolge muss jede Zahl von 1 bis n genau einmal enthalten.', { bad: true }); return res; }
+      snap(`Die Mäuse 1 bis ${n} stehen im Gang, Maus 1 vorn. Am Käse sollen sie in der Reihenfolge <b>${order.join(', ')}</b> ankommen.`);
+      for (const t of order) {
+        for (;;) {
+          const top = stk[stk.length - 1];
+          if (top === t) {
+            if (waiting.length) { wins[t]++; stk.pop(); out.push(t); snap(`Maus <b>${t}</b> soll als Nächstes zum Käse und ist oben im rechten Gang: Sie <b>gewinnt den Zweikampf</b> gegen Maus ${waiting[0]} und läuft durch den Abzweig zum Käse.`, { duel: [t, waiting[0]], winner: t }); }
+            else { stk.pop(); out.push(t); snap(`Keine Maus kommt mehr nach: Maus <b>${t}</b> läuft ohne Zweikampf zum Käse.`); }
+            break;
+          }
+          if (waiting.length) {
+            const f = waiting.shift();
+            if (stk.length) { wins[f]++; snap(`Maus ${top} (oben) darf noch nicht zum Käse, denn als Nächstes wird Maus ${t} erwartet. Also <b>gewinnt Maus ${f}</b> den Zweikampf und schiebt Maus ${top} tiefer in den Gang.`, { duel: [f, top], winner: f, pre: true }); }
+            stk.push(f);
+            snap(`Maus <b>${f}</b> läuft am Abzweig vorbei in den rechten Gang und liegt jetzt <b>oben</b> auf dem Stapel.`);
+            continue;
+          }
+          snap(`Als Nächstes müsste Maus <b>${t}</b> zum Käse, aber sie steckt unter Maus ${top} im Gang, und es kommt keine Maus mehr nach. Diese Reihenfolge ist <b>unmöglich</b>.`, { bad: true });
+          return res;
+        }
+      }
+      snap(`Fertig: Alle Mäuse sind in der Reihenfolge ${order.join(', ')} am Käse. Die Tabelle zeigt, wie viele Zweikämpfe jede Maus gewonnen hat.`, { done: true });
+      return res;
+    }
+    function draw(s) {
+      const S = D().S; const T = D().text;
+      const W = 660; const H = 250;
+      const svg = D().svgRoot(W, H, 'Mäusegang');
+      svg.append(S('rect', { x: 0, y: 70, width: W, height: H - 70, fill: 'var(--amber-soft)' }));
+      svg.append(S('line', { x1: 0, y1: 70, x2: W, y2: 70, stroke: 'var(--green)', 'stroke-width': 6 }));
+      const jx = 300;
+      svg.append(S('path', { d: `M10,170 L${W - 20},170 L${W - 20},206 L10,206 Z`, fill: 'var(--sheet)', stroke: 'var(--ink-3)', 'stroke-width': 1.2 }));
+      svg.append(S('path', { d: `M${jx - 6},170 L${jx - 120},70 L${jx - 84},70 L${jx + 30},170 Z`, fill: 'var(--sheet)', stroke: 'var(--ink-3)', 'stroke-width': 1.2 }));
+      svg.append(T(jx - 102, 42, '🧀', { size: 26, anchor: 'middle' }));
+      svg.append(T(40, 226, '← Mäuse kommen von links', { size: 12, fill: 'var(--ink-3)' }));
+      svg.append(T(W - 24, 226, 'Ende des Gangs', { size: 12, anchor: 'end', fill: 'var(--ink-3)' }));
+      svg.append(T(jx + 40, 160, 'rechter Gang (Stapel)', { size: 12, fill: 'var(--ink-3)' }));
+      const mouse = (x, y, num, col) => {
+        svg.append(S('circle', { cx: x, cy: y, r: 13, fill: col ? `var(--${col}-soft)` : 'var(--sheet-2)', stroke: col ? `var(--${col})` : 'var(--ink-2)', 'stroke-width': col ? 2.4 : 1.5 }));
+        svg.append(T(x, y + 1, String(num), { size: 13, anchor: 'middle', weight: 700 }));
+      };
+      const win = s.winner;
+      s.waiting.forEach((m, k) => { const x = jx - 30 - k * 30; if (x > 18) mouse(x, 188, m, s.duel && s.duel.includes(m) ? (m === win ? 'green' : 'red') : null); });
+      if (s.waiting.length && jx - 30 - (s.waiting.length - 1) * 30 <= 18) svg.append(T(22, 188, '…', { size: 16 }));
+      s.stk.slice().reverse().forEach((m, k) => mouse(jx + 34 + k * 30, 188, m, s.duel && s.duel.includes(m) ? (m === win ? 'green' : 'red') : k === 0 ? 'blue' : null));
+      svg.append(T(jx - 50, 36, 'am Käse:', { size: 12, fill: 'var(--ink-3)' }));
+      s.out.forEach((m, k) => mouse(jx + 22 + k * 30, 36, m, k === s.out.length - 1 && !s.done ? 'green' : null));
+      if (s.duel) svg.append(T(jx + 8, 150, '⚔', { size: 22, anchor: 'middle', fill: 'var(--red)' }));
+      ui.stage.innerHTML = '';
+      ui.stage.append(svg);
+      stackEl.innerHTML = '';
+      s.stk.forEach((m, k) => stackEl.append(el('div', { class: 'fr' + (k === s.stk.length - 1 ? ' top' : '') }, 'Maus ' + m)));
+      if (!s.stk.length) stackEl.append(el('div', { class: 'sv-empty' }, 'leer'));
+      const n = s.wins.length - 1;
+      const tb = el('table', { class: 'wins' });
+      const r1 = el('tr', null, el('th', null, 'Maus'));
+      const r2 = el('tr', null, el('th', null, 'Siege'));
+      for (let m = 1; m <= n; m++) { r1.append(el('td', null, String(m))); r2.append(el('td', null, String(s.wins[m]))); }
+      tb.append(r1, r2);
+      winsEl.innerHTML = '';
+      winsEl.append(tb);
+      ui.info.innerHTML = s.text;
+      ui.info.style.color = s.bad ? 'var(--red)' : '';
+    }
+    const st = stepper(ui.ctrl, (i) => draw(steps[i]));
+    function run() {
+      const order = inp.value.split(/[,\s;]+/).map((x) => x.trim()).filter(Boolean).map(Number);
+      steps = simulate(order);
+      st.reset(steps.length);
+    }
+    go.addEventListener('click', run);
+    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') run(); });
+    presets.s.addEventListener('change', () => { if (presets.s.value) { inp.value = presets.s.value; run(); } });
+    run();
+  }
+
+  // ------------------------------------------------------------------ Ratespiel 1..100 (binäre Suche)
+  function guess(host, cfg) {
+    const { el, esc } = U();
+    const max = cfg.max || 100;
+    const ui = shell(host, cfg.title || `Ratespiel: eine Zahl zwischen 1 und ${max}`);
+    const strat = select('Strategie', [['theo', 'Theo: 17, dann in 5er-Schritten'], ['halb', 'Halbieren: immer die Mitte']], cfg.strategy || 'theo');
+    const secretIn = el('input', { type: 'number', value: String(cfg.secret || 42), min: '1', max: String(max), style: 'width:5em', 'aria-label': 'Geheime Zahl' });
+    const go = el('button', { class: 'btn primary' }, 'Raten lassen');
+    const all = el('button', { class: 'btn ghost' }, `Alle Zahlen 1–${max} testen`);
+    const row = el('div', { class: 'viz-ctrl', style: 'border-top:0;border-bottom:1px solid var(--rule)' }, strat.label, el('label', null, 'Aylins Zahl', secretIn), go, all);
+    host.insertBefore(row, host.children[1]);
+    const LIMIT = cfg.limit || 7;
+    function play(secret, s) {
+      const tries = [];
+      let lo = 1; let hi = max;
+      let g = s === 'theo' ? 17 : Math.floor((lo + hi) / 2);
+      for (let k = 0; k < 40; k++) {
+        const fb = g === secret ? 'getroffen' : g > secret ? 'zu groß' : 'zu klein';
+        tries.push({ g, fb, lo, hi });
+        if (fb === 'getroffen') break;
+        if (fb === 'zu groß') hi = Math.min(hi, g - 1); else lo = Math.max(lo, g + 1);
+        if (s === 'theo') g = fb === 'zu groß' ? g - 5 : g + 5;
+        else g = Math.floor((lo + hi) / 2);
+      }
+      return tries;
+    }
+    let tries = [];
+    function draw(i) {
+      const S = D().S; const T = D().text;
+      const W = 660; const H = 120;
+      const svg = D().svgRoot(W, H, 'Zahlenstrahl');
+      const x = (v) => 20 + ((v - 1) / (max - 1)) * (W - 40);
+      const t = tries[i];
+      const lo = i + 1 < tries.length ? tries[i + 1].lo : t.lo;
+      const hi = i + 1 < tries.length ? tries[i + 1].hi : t.hi;
+      svg.append(S('line', { x1: x(1), y1: 60, x2: x(max), y2: 60, stroke: 'var(--ink-3)', 'stroke-width': 2 }));
+      if (t.fb !== 'getroffen') svg.append(S('rect', { x: x(lo) - 3, y: 50, width: Math.max(6, x(hi) - x(lo) + 6), height: 20, rx: 4, fill: 'var(--blue-soft)', stroke: 'var(--blue)' }));
+      for (let v = 1; v <= max; v += max >= 50 ? 10 : 1) svg.append(T(x(v), 88, String(v), { size: 11, anchor: 'middle', fill: 'var(--ink-3)' }));
+      svg.append(T(x(max), 88, String(max), { size: 11, anchor: 'middle', fill: 'var(--ink-3)' }));
+      tries.slice(0, i + 1).forEach((tr, k) => {
+        const cur = k === i;
+        svg.append(S('line', { x1: x(tr.g), y1: 30, x2: x(tr.g), y2: 58, stroke: cur ? (tr.fb === 'getroffen' ? 'var(--green)' : 'var(--red)') : 'var(--ink-3)', 'stroke-width': cur ? 2.5 : 1 }));
+        if (cur) svg.append(T(x(tr.g), 20, `${tr.g}: ${tr.fb}`, { size: 13, anchor: 'middle', weight: 700, fill: tr.fb === 'getroffen' ? 'var(--green)' : 'var(--red)' }));
+      });
+      const secret = +secretIn.value;
+      svg.append(T(x(secret), 108, '▲ ' + secret, { size: 12, anchor: 'middle', fill: 'var(--green)', weight: 700 }));
+      ui.stage.innerHTML = '';
+      ui.stage.append(svg);
+      ui.stage.append(el('div', { class: 'chips-line', style: 'justify-content:center;margin-top:6px' }, tries.slice(0, i + 1).map((tr, k) => el('span', { class: k === i ? 'hl' : '' }, `${k + 1}. ${tr.g} (${tr.fb})`))));
+      const n = i + 1;
+      let msg = `Versuch ${n}: Theo rät <b>${t.g}</b>, Aylin sagt <b>${t.fb}</b>.`;
+      if (t.fb !== 'getroffen') msg += ` Möglich sind noch die Zahlen <b>${lo} bis ${hi}</b> (${Math.max(0, hi - lo + 1)} Stück).`;
+      else msg += n <= LIMIT ? ` Geschafft mit ${n} von ${LIMIT} Versuchen.` : ` Getroffen, aber erst mit ${n} Versuchen: Er hatte nur ${LIMIT}.`;
+      if (n === LIMIT && t.fb !== 'getroffen') msg += ` <b style="color:var(--red)">Das war der letzte erlaubte Versuch.</b>`;
+      ui.info.innerHTML = msg;
+    }
+    const st = stepper(ui.ctrl, draw);
+    function run() {
+      let v = Math.round(+secretIn.value);
+      if (!(v >= 1 && v <= max)) { v = 42; secretIn.value = '42'; }
+      tries = play(v, strat.s.value);
+      st.reset(tries.length);
+    }
+    go.addEventListener('click', run);
+    strat.s.addEventListener('change', run);
+    all.addEventListener('click', () => {
+      const res = {};
+      ['theo', 'halb'].forEach((s) => {
+        let okc = 0; let worst = 0;
+        for (let v = 1; v <= max; v++) { const tr = play(v, s); const n = tr[tr.length - 1].fb === 'getroffen' ? tr.length : 99; if (n <= LIMIT) okc++; worst = Math.max(worst, n); }
+        res[s] = { okc, worst };
+      });
+      ui.info.innerHTML = `<b>Theos Strategie</b> findet nur ${res.theo.okc} von ${max} Zahlen in höchstens ${LIMIT} Versuchen (viele Zahlen trifft sie nie, weil sie nur Zahlen der Form 5·k + 2 rät). <b>Halbieren</b> findet alle ${res.halb.okc} Zahlen, im schlechtesten Fall mit <b>${res.halb.worst}</b> Versuchen: Jeder Versuch halbiert die Menge der möglichen Zahlen, und 2<sup>7</sup> − 1 = 127 ≥ ${max}.`;
+    });
+    run();
+  }
+
+  // ------------------------------------------------------------------ geordneter Binärbaum: Einfügen, Suchen, Durchlaufen, Kompositum
+  const BST_PRESETS = {
+    beispiel: { label: 'Beispielbaum (64 …)', vals: [64, 57, 0, 30, 96, 85, 82, 69, 84, 95] },
+    entstehung: { label: 'Entstehung (5781 …)', vals: [5781, 4221, 6345, 5799] },
+    netz: { label: 'Netzwerkgeräte', vals: ['N202', 'R273', 'N304', 'P114', 'N111', 'R212', 'N264'] },
+    abi18: { label: 'Abi18Net', vals: [3257, 66013, 116, 5485, 2485, 833271, 73680] },
+    woerter: { label: 'Wörterbuch (clip …)', vals: ['clip', 'cat', 'cup', 'cut', 'cube', 'cave', 'crab'] },
+    test: { label: 'Testbaum (clip, car, crab, coin)', vals: ['clip', 'car', 'crab', 'coin'] },
+    sortiert: { label: 'sortiert eingefügt 1–7', vals: [1, 2, 3, 4, 5, 6, 7] },
+    h13: { label: 'habit … hull (13 Wörter)', vals: ['habit', 'hag', 'hall', 'heap', 'heart', 'heat', 'hero', 'hike', 'hint', 'hole', 'hope', 'hub', 'hull'] },
+    leer: { label: 'leerer Baum', vals: [] },
+  };
+  function cmpV(a, b) {
+    if (typeof a === 'number' && typeof b === 'number') return a - b;
+    a = String(a); b = String(b);
+    return a < b ? -1 : a > b ? 1 : 0;
+  }
+  function parseVal(s) { s = String(s).trim(); return /^-?\d+(\.\d+)?$/.test(s) ? +s : s; }
+  function bst(host, cfg) {
+    const { el, esc } = U();
+    const komp = cfg.mode === 'komp';
+    const ui = shell(host, cfg.title || (komp ? 'Binärbaum als Kompositum: Nachrichten durch den Baum' : 'Geordneter Binärbaum: Einfügen, Suchen, Durchlaufen'), { side: true });
+    // controls
+    const preset = select('Baum', Object.entries(BST_PRESETS).map(([k, p]) => [k, p.label]), cfg.preset || 'beispiel');
+    const valIn = el('input', { type: 'text', value: cfg.value != null ? String(cfg.value) : '70', size: '7', 'aria-label': 'Wert' });
+    const bIns = el('button', { class: 'btn primary' }, 'Einfügen');
+    const bSearch = el('button', { class: 'btn' }, 'Suchen');
+    const trav = select('', [['in', 'Inorder'], ['pre', 'Preorder'], ['post', 'Postorder']], 'in');
+    const bTrav = el('button', { class: 'btn' }, 'ausgeben');
+    const bHeight = el('button', { class: 'btn' }, 'HöheGeben');
+    const bBal = el('button', { class: 'btn ghost', title: 'Alle Werte sortiert nehmen und den Baum mit der Mitte als Wurzel neu aufbauen' }, 'Ausgeglichen neu aufbauen');
+    const absBox = el('input', { type: 'checkbox' });
+    if (komp || cfg.abschluss) absBox.checked = true;
+    const row1 = el('div', { class: 'viz-ctrl', style: 'border-top:0' }, preset.label, el('label', null, 'Wert', valIn), bIns, bSearch, el('label', null, trav.s, bTrav));
+    const row2 = el('div', { class: 'viz-ctrl', style: 'border-top:0;border-bottom:1px solid var(--rule);padding-top:0' }, bHeight, bBal, el('label', null, absBox, 'ABSCHLUSS zeigen'));
+    if (!komp && !cfg.height) bHeight.style.display = 'none';
+    host.insertBefore(row2, host.children[1]);
+    host.insertBefore(row1, host.children[1]);
+    const codeEl = el('div');
+    const framesEl = el('div', { class: 'stack' });
+    const outEl = el('div', { class: 'chips-line' });
+    const statsEl = el('div', { class: 'kv' });
+    ui.panel.append(el('h5', null, komp ? 'Code (Kompositum, verkürzt)' : 'Algorithmus'), codeEl);
+    if (komp) ui.panel.append(el('h5', null, 'Aktive Aufrufe'), framesEl);
+    ui.panel.append(el('h5', null, 'Ausgabe'), outEl, el('h5', null, 'Kennzahlen'), statsEl);
+    // model
+    let uidN = 1;
+    let tree = null;
+    const node = (v) => ({ v, l: null, r: null, id: uidN++ });
+    const clone = (t) => (t ? { v: t.v, id: t.id, l: clone(t.l), r: clone(t.r) } : null);
+    function insertDirect(v) {
+      if (!tree) { tree = node(v); return; }
+      let c = tree;
+      for (;;) {
+        const d = cmpV(v, c.v);
+        if (d === 0) return;
+        const side = d < 0 ? 'l' : 'r';
+        if (!c[side]) { c[side] = node(v); return; }
+        c = c[side];
+      }
+    }
+    function load(key) {
+      tree = null;
+      (BST_PRESETS[key] || BST_PRESETS.beispiel).vals.forEach(insertDirect);
+    }
+    // code listings
+    const CODE = {
+      logicIns: ['Einfügen(neu) beginnend bei der Wurzel:', '  falls Teilbaum leer dann', '    neuer Knoten mit neu kommt hierher', '  sonst falls neu < Wert dann', '    im linken Teilbaum einfügen', '  sonst falls neu > Wert dann', '    im rechten Teilbaum einfügen', '  sonst: schon vorhanden'],
+      logicSearch: ['Suchen(s) beginnend bei der Wurzel:', '  falls Teilbaum leer dann', '    return nichts (nicht gefunden)', '  falls s == Wert dann', '    return Daten (gefunden)', '  falls s < Wert dann', '    im linken Teilbaum suchen', '  sonst im rechten Teilbaum suchen'],
+      kompIns: ['# BinBaum', 'def Einfuegen(self, d):', '    self.wurzel = self.wurzel.Einfuegen(d)', '# Knoten', 'def Einfuegen(self, d):', '    if gleicher Schlüssel: return self', '    if self.daten > d:', '        self.linkerNachfolger = self.linkerNachfolger.Einfuegen(d)', '    else:', '        self.rechterNachfolger = self.rechterNachfolger.Einfuegen(d)', '    return self', '# Abschluss', 'def Einfuegen(self, d):', '    return Knoten(d, Abschluss(), Abschluss())'],
+      kompSearch: ['# BinBaum', 'def Suchen(self, s):', '    return self.wurzel.Suchen(s)', '# Knoten', 'def Suchen(self, s):', '    if self.daten == s: return self.daten', '    if self.daten > s:', '        return self.linkerNachfolger.Suchen(s)', '    return self.rechterNachfolger.Suchen(s)', '# Abschluss', 'def Suchen(self, s):', '    return None'],
+      kompHeight: ['# BinBaum', 'def HoeheGeben(self):', '    return self.wurzel.HoeheGeben()', '# Knoten', 'def HoeheGeben(self):', '    h1 = self.linkerNachfolger.HoeheGeben()', '    h2 = self.rechterNachfolger.HoeheGeben()', '    return 1 + max(h1, h2)', '# Abschluss', 'def HoeheGeben(self):', '    return -1'],
+      trav: {
+        in: ['# Knoten', 'def InorderAusgeben(self):', '    self.linkerNachfolger.InorderAusgeben()', '    print(self.daten)', '    self.rechterNachfolger.InorderAusgeben()', '# Abschluss', 'def InorderAusgeben(self):', '    pass'],
+        pre: ['# Knoten', 'def PreorderAusgeben(self):', '    print(self.daten)', '    self.linkerNachfolger.PreorderAusgeben()', '    self.rechterNachfolger.PreorderAusgeben()', '# Abschluss', 'def PreorderAusgeben(self):', '    pass'],
+        post: ['# Knoten', 'def PostorderAusgeben(self):', '    self.linkerNachfolger.PostorderAusgeben()', '    self.rechterNachfolger.PostorderAusgeben()', '    print(self.daten)', '# Abschluss', 'def PostorderAusgeben(self):', '    pass'],
+      },
+      bal: ['Aufbauen(sortierte Teilliste):', '  falls Teilliste leer dann', '    return leerer Teilbaum', '  m = mittleres Element (Index n // 2)', '  Knoten mit m wird Wurzel', '  linker Teilbaum = Aufbauen(Elemente vor m)', '  rechter Teilbaum = Aufbauen(Elemente nach m)'],
+    };
+    let cb = codeBox(komp ? CODE.kompIns : CODE.logicIns);
+    codeEl.append(cb.box);
+    function setCode(lines) { codeEl.innerHTML = ''; cb = codeBox(lines); codeEl.append(cb.box); }
+    // steps
+    let steps = [];
+    let frames = [];
+    let out = [];
+    function rec(o) { steps.push({ tree: clone(tree), frames: frames.slice(), out: out.slice(), ...o }); }
+    const lbl = (v) => (typeof v === 'number' ? String(v) : '„' + v + '“');
+    function opInsert(v) {
+      steps = []; frames = []; out = [];
+      if (!komp) {
+        setCode(CODE.logicIns);
+        if (!tree) { rec({ line: 1, text: `Der Baum ist leer. ${lbl(v)} wird die <b>Wurzel</b>.`, abs: 'root' }); tree = node(v); rec({ line: 2, text: `Neuer Knoten ${lbl(v)} ist die Wurzel.`, hl: { [tree.id]: 'green' } }); return; }
+        let c = tree; const path = [];
+        let n = 0;
+        for (;;) {
+          path.push(c.id); n++;
+          const d = cmpV(v, c.v);
+          if (d === 0) { rec({ line: 7, path: path.slice(), hl: { [c.id]: 'amber' }, text: `Vergleich ${n}: ${lbl(v)} = ${lbl(c.v)}. Der Schlüssel ist <b>schon vorhanden</b>, es wird nichts eingefügt.` }); return; }
+          const side = d < 0 ? 'l' : 'r';
+          rec({ line: d < 0 ? 4 : 6, path: path.slice(), hl: { [c.id]: 'amber' }, text: `Vergleich ${n}: ${lbl(v)} ${d < 0 ? '<' : '>'} ${lbl(c.v)}, also weiter im <b>${d < 0 ? 'linken' : 'rechten'}</b> Teilbaum von ${lbl(c.v)}.` });
+          if (!c[side]) {
+            rec({ line: 1, path: path.slice(), abs: [c.id, side], text: `Der ${d < 0 ? 'linke' : 'rechte'} Teilbaum von ${lbl(c.v)} ist <b>leer</b> (dort steht nur ein Abschluss).` });
+            c[side] = node(v);
+            rec({ line: 2, path: path.slice(), hl: { [c[side].id]: 'green' }, text: `Der neue Knoten ${lbl(v)} wird als <b>${d < 0 ? 'linker' : 'rechter'} Nachfolger</b> von ${lbl(c.v)} eingehängt. ${n} Vergleich${n > 1 ? 'e' : ''}, und der Baum ist weiterhin geordnet.` });
+            return;
+          }
+          c = c[side];
+        }
+      }
+      // Kompositum: messages
+      setCode(CODE.kompIns);
+      frames.push('binBaum.Einfuegen(' + v + ')');
+      rec({ line: 2, text: `Der Baum leitet die Nachricht an seine Wurzel weiter: <code>self.wurzel = self.wurzel.Einfuegen(${esc(String(v))})</code>. Was zurückkommt, wird die (neue) Wurzel.`, cur: tree ? tree.id : null, abs: tree ? null : 'root' });
+      const result = (function ins(t, parentTxt) {
+        if (!t) {
+          frames.push('Abschluss.Einfuegen(' + v + ')');
+          rec({ line: 13, abs: parentTxt, text: `Die Nachricht kommt bei einem <b>Abschluss</b> an: Rekursionsende. Er erzeugt einen neuen Knoten ${lbl(v)} mit zwei neuen Abschluss-Objekten und gibt ihn zurück.` });
+          frames.pop();
+          return { created: node(v) };
+        }
+        frames.push('Knoten ' + t.v + '.Einfuegen(' + v + ')');
+        const d = cmpV(v, t.v);
+        if (d === 0) { rec({ line: 5, cur: t.id, text: `Knoten ${lbl(t.v)} hat denselben Schlüssel: nichts einfügen, <code>return self</code>.` }); frames.pop(); return { same: true }; }
+        const side = d < 0 ? 'l' : 'r';
+        rec({ line: d < 0 ? 7 : 9, cur: t.id, text: `Knoten ${lbl(t.v)} vergleicht: ${lbl(v)} ${d < 0 ? '<' : '>'} ${lbl(t.v)}. Er schickt die Nachricht an seinen <b>${d < 0 ? 'linken' : 'rechten'} Nachfolger</b> und wartet auf dessen Antwort.` });
+        const r = ins(t[side], [t.id, side]);
+        if (r.created) {
+          t[side] = r.created;
+          rec({ line: d < 0 ? 7 : 9, cur: t.id, hl: { [r.created.id]: 'green' }, text: `Zurück bei ${lbl(t.v)}: Die Antwort ist der neue Knoten. <code>self.${d < 0 ? 'linkerNachfolger' : 'rechterNachfolger'} = …</code> hängt ihn ein, der alte Abschluss fällt weg.` });
+        } else {
+          rec({ line: d < 0 ? 7 : 9, cur: t.id, text: `Zurück bei ${lbl(t.v)}: Die Antwort ist sein bisheriger Nachfolger (er hat sich selbst zurückgegeben). Die Zuweisung ändert nichts.` });
+        }
+        rec({ line: 10, cur: t.id, text: `Knoten ${lbl(t.v)} gibt <b>sich selbst</b> zurück (<code>return self</code>).` });
+        frames.pop();
+        return { self: true };
+      })(tree, 'root');
+      if (result.created) tree = result.created;
+      rec({ line: 2, hl: result.created ? { [tree.id]: 'green' } : {}, text: result.created ? 'Der Baum war leer: Die Antwort ist der neue Knoten, er wird die Wurzel.' : 'Zurück im Baum: Die Wurzel hat sich selbst zurückgegeben, <code>self.wurzel</code> bleibt gleich. Fertig.' });
+      frames.pop();
+    }
+    function opSearch(v) {
+      steps = []; frames = []; out = [];
+      if (!komp) {
+        setCode(CODE.logicSearch);
+        let c = tree; const path = []; let n = 0;
+        for (;;) {
+          if (!c) { rec({ line: 2, path: path.slice(), text: `Leerer Teilbaum erreicht: ${lbl(v)} ist <b>nicht im Baum</b>. Dafür waren ${n} Vergleich${n === 1 ? '' : 'e'} nötig.` }); return; }
+          path.push(c.id); n++;
+          const d = cmpV(v, c.v);
+          if (d === 0) { rec({ line: 4, path: path.slice(), hl: { [c.id]: 'green' }, text: `Vergleich ${n}: ${lbl(v)} = ${lbl(c.v)}: <b>gefunden</b> mit ${n} Vergleich${n === 1 ? '' : 'en'}.` }); return; }
+          rec({ line: d < 0 ? 6 : 7, path: path.slice(), hl: { [c.id]: 'amber' }, text: `Vergleich ${n}: ${lbl(v)} ${d < 0 ? '<' : '>'} ${lbl(c.v)}, also nur noch im <b>${d < 0 ? 'linken' : 'rechten'}</b> Teilbaum suchen. Der andere Teilbaum fällt ganz weg.` });
+          c = d < 0 ? c.l : c.r;
+        }
+      }
+      setCode(CODE.kompSearch);
+      frames.push('binBaum.Suchen(' + v + ')');
+      rec({ line: 2, text: `Der Baum leitet die Suche an die Wurzel weiter und gibt deren Antwort zurück.`, cur: tree ? tree.id : null });
+      const res = (function se(t, parent) {
+        if (!t) { frames.push('Abschluss.Suchen(' + v + ')'); rec({ line: 11, abs: parent, text: 'Die Suche erreicht einen <b>Abschluss</b>: Der Schlüssel kommt nicht vor. Er gibt <code>None</code> zurück.' }); frames.pop(); return null; }
+        frames.push('Knoten ' + t.v + '.Suchen(' + v + ')');
+        const d = cmpV(v, t.v);
+        if (d === 0) { rec({ line: 5, cur: t.id, hl: { [t.id]: 'green' }, text: `Knoten ${lbl(t.v)} hat den gesuchten Schlüssel und gibt seine <b>Daten</b> zurück.` }); frames.pop(); return t.v; }
+        rec({ line: d < 0 ? 7 : 8, cur: t.id, text: `Knoten ${lbl(t.v)}: ${lbl(v)} ${d < 0 ? '<' : '>'} ${lbl(t.v)}, er fragt seinen ${d < 0 ? 'linken' : 'rechten'} Nachfolger und gibt dessen Antwort <b>unverändert</b> weiter.` });
+        const r = se(d < 0 ? t.l : t.r, [t.id, d < 0 ? 'l' : 'r']);
+        rec({ line: d < 0 ? 7 : 8, cur: t.id, text: `Knoten ${lbl(t.v)} reicht die Antwort (${r == null ? 'None' : lbl(r)}) nach oben weiter.` });
+        frames.pop();
+        return r;
+      })(tree, 'root');
+      frames.pop();
+      rec({ line: 2, text: res == null ? `Ergebnis: <b>None</b>, ${lbl(v)} ist nicht im Baum.` : `Ergebnis: die Daten von ${lbl(res)}.` });
+    }
+    function opTrav(kind) {
+      steps = []; frames = []; out = [];
+      setCode(CODE.trav[kind]);
+      const nameK = { in: 'Inorder', pre: 'Preorder', post: 'Postorder' }[kind];
+      const lines = { in: [2, 3, 4], pre: [3, 2, 4], post: [2, 3, 4] }[kind];
+      rec({ line: 1, text: `${nameK}-Durchlauf: Jeder Knoten ${kind === 'in' ? 'gibt zuerst seinen linken Teilbaum aus, dann sich selbst, dann den rechten' : kind === 'pre' ? 'gibt zuerst sich selbst aus, dann den linken, dann den rechten Teilbaum' : 'gibt zuerst den linken, dann den rechten Teilbaum aus und zuletzt sich selbst'}.` });
+      (function walk(t) {
+        if (!t) return;
+        frames.push('Knoten ' + t.v);
+        const visit = () => { out.push(t.v); rec({ line: kind === 'pre' ? 2 : kind === 'in' ? 3 : 4, cur: t.id, hl: { [t.id]: 'green' }, text: `Knoten ${lbl(t.v)} gibt sich aus. Ausgabe bisher: ${out.map(String).join(', ')}` }); };
+        if (kind === 'pre') visit();
+        rec({ line: lines[0], cur: t.id, text: `Knoten ${lbl(t.v)} schickt die Nachricht an seinen <b>linken</b> Nachfolger${t.l ? '' : ' (ein Abschluss: Er tut nichts)'}.` });
+        walk(t.l);
+        if (kind === 'in') visit();
+        rec({ line: kind === 'post' ? 3 : 4, cur: t.id, text: `Knoten ${lbl(t.v)} schickt die Nachricht an seinen <b>rechten</b> Nachfolger${t.r ? '' : ' (ein Abschluss: Er tut nichts)'}.` });
+        walk(t.r);
+        if (kind === 'post') visit();
+        frames.pop();
+      })(tree);
+      rec({ line: -1, text: `Fertig. ${nameK}: <b>${out.map(String).join(', ') || '(leer)'}</b>${kind === 'in' ? '. Beim geordneten Binärbaum ist das genau die <b>sortierte</b> Reihenfolge.' : '.'}` });
+    }
+    function opHeight() {
+      steps = []; frames = []; out = [];
+      setCode(CODE.kompHeight);
+      const ann = {};
+      frames.push('binBaum.HoeheGeben()');
+      rec({ line: 2, text: 'Höhe = größte Tiefe eines Knotens (Anzahl der Kanten von der Wurzel bis zum tiefsten Knoten). Der Baum fragt die Wurzel.', ann: { ...ann } });
+      const h = (function hg(t, parent) {
+        if (!t) { frames.push('Abschluss.HoeheGeben()'); rec({ line: 10, abs: parent, text: 'Ein <b>Abschluss</b> gibt <b>−1</b> zurück: Ein leerer Teilbaum ist um eins niedriger als ein einzelner Knoten (Höhe 0).', ann: { ...ann } }); frames.pop(); return -1; }
+        frames.push('Knoten ' + t.v + '.HoeheGeben()');
+        rec({ line: 5, cur: t.id, text: `Knoten ${lbl(t.v)} fragt zuerst seinen linken Nachfolger nach dessen Höhe.`, ann: { ...ann } });
+        const a = hg(t.l, [t.id, 'l']);
+        rec({ line: 6, cur: t.id, text: `Links kam ${a} zurück. Jetzt fragt ${lbl(t.v)} den rechten Nachfolger.`, ann: { ...ann } });
+        const b = hg(t.r, [t.id, 'r']);
+        ann[t.id] = 1 + Math.max(a, b);
+        rec({ line: 7, cur: t.id, hl: { [t.id]: 'green' }, text: `Knoten ${lbl(t.v)}: 1 + max(${a}, ${b}) = <b>${ann[t.id]}</b>.`, ann: { ...ann } });
+        frames.pop();
+        return ann[t.id];
+      })(tree, 'root');
+      frames.pop();
+      rec({ line: 2, text: `Die Höhe des Baums ist <b>${h}</b>${h >= 0 ? `, er hat also ${h + 1} Ebene${h ? 'n' : ''}` : ' (leerer Baum)'}.`, ann: { ...ann } });
+    }
+    function opBalance() {
+      steps = []; frames = []; out = [];
+      setCode(CODE.bal);
+      const vals = [];
+      (function io(t) { if (!t) return; io(t.l); vals.push(t.v); io(t.r); })(tree);
+      tree = null;
+      rec({ line: 0, text: `Die Werte werden sortiert genommen: ${vals.map(String).join(', ') || '(keine)'}. Daraus entsteht ein Baum mit möglichst wenigen Ebenen.` });
+      function build(lo, hi, attach) {
+        if (lo > hi) return;
+        const m = lo + Math.floor((hi - lo + 1) / 2);
+        const n = node(vals[m]);
+        attach(n);
+        rec({ line: 4, hl: { [n.id]: 'green' }, text: `Teilliste [${vals.slice(lo, hi + 1).map(String).join(', ')}]: Das mittlere Element <b>${lbl(vals[m])}</b> wird hier Knoten. Links davon kommen die kleineren, rechts die größeren Elemente.` });
+        build(lo, m - 1, (k) => { n.l = k; });
+        build(m + 1, hi, (k) => { n.r = k; });
+      }
+      build(0, vals.length - 1, (k) => { tree = k; });
+      rec({ line: -1, text: 'Fertig: ein ausgeglichener Baum. Jede Suche braucht höchstens so viele Vergleiche, wie der Baum Ebenen hat.' });
+    }
+    // drawing
+    function stats(t) {
+      let n = 0; let leaves = 0;
+      const h = (function hh(x) { if (!x) return -1; n++; if (!x.l && !x.r) leaves++; return 1 + Math.max(hh(x.l), hh(x.r)); })(t);
+      const bal = (function bb(x) { if (!x) return -1; const a = bb(x.l); const b = bb(x.r); if (a === null || b === null || Math.abs(a - b) > 1) return null; return 1 + Math.max(a, b); })(t) !== null;
+      let degen = true;
+      (function dg(x) { if (!x) return; if (x.l && x.r) degen = false; dg(x.l); dg(x.r); })(t);
+      const full = n === 2 ** (h + 1) - 1;
+      const minLevels = n ? Math.ceil(Math.log2(n + 1)) : 0;
+      return { n, h, leaves, inner: n - leaves, bal, degen: degen && n >= 3, full: full && n > 0, minLevels };
+    }
+    function drawTree(s) {
+      const S = D().S; const T = D().text; const tw = D().tw;
+      const showA = absBox.checked;
+      const items = [];
+      let cursor = 0;
+      const gap = 12;
+      const absHl = s.abs;
+      (function lay(t, d, parentId, side) {
+        if (!t) {
+          if (!showA && !(absHl && ((absHl === 'root' && parentId == null) || (Array.isArray(absHl) && absHl[0] === parentId && absHl[1] === side)))) return null;
+          const it = { a: true, d, parentId, side, w: 22, h: 18 };
+          it.x = cursor + 11; cursor += 22 + gap; items.push(it); return it;
+        }
+        const w = Math.max(38, tw(String(t.v), 14, 'body', 700) + 20);
+        const it = { t, d, parentId, side, w, h: 30 };
+        lay(t.l, d + 1, t.id, 'l');
+        it.x = cursor + w / 2; cursor += w + gap;
+        lay(t.r, d + 1, t.id, 'r');
+        items.push(it);
+        return it;
+      })(s.tree, 0, null, null);
+      ui.stage.innerHTML = '';
+      if (!items.length) { ui.stage.append(el('div', { class: 'sv-empty', style: 'padding:30px' }, 'Der Baum ist leer.')); return; }
+      const LH = 64;
+      const maxD = Math.max(...items.map((i) => i.d));
+      const W = cursor + 30;
+      const H = 30 + maxD * LH + 50;
+      const svg = D().svgRoot(Math.max(W, 200), H, 'Binärbaum');
+      const mk = D().arrowDefs(svg, 'bs' + Math.random().toString(36).slice(2, 7), 'var(--ink-2)');
+      const mkB = D().arrowDefs(svg, 'bb' + Math.random().toString(36).slice(2, 7), 'var(--blue)');
+      const byId = {};
+      items.forEach((i) => { if (i.t) byId[i.t.id] = i; });
+      const path = new Set(s.path || []);
+      const X = (i) => i.x + 15;
+      const Y = (i) => 20 + i.d * LH;
+      items.forEach((i) => {
+        if (i.parentId == null) return;
+        const p = byId[i.parentId];
+        if (!p) return;
+        const onP = i.t ? path.has(i.t.id) && path.has(p.t.id) : false;
+        svg.append(S('line', { x1: X(p), y1: Y(p) + p.h, x2: X(i), y2: Y(i) - 2, stroke: onP ? 'var(--blue)' : 'var(--ink-2)', 'stroke-width': onP ? 2.6 : 1.4, 'marker-end': onP ? mkB : mk, 'stroke-dasharray': i.a ? '3 3' : null }));
+      });
+      items.forEach((i) => {
+        const x = X(i) - i.w / 2; const y = Y(i);
+        if (i.a) {
+          const hot = absHl && ((absHl === 'root' && i.parentId == null) || (Array.isArray(absHl) && absHl[0] === i.parentId && absHl[1] === i.side));
+          svg.append(S('rect', { x, y, width: i.w, height: i.h, rx: 3, fill: hot ? 'var(--amber-soft)' : 'var(--sheet-2)', stroke: hot ? 'var(--amber)' : 'var(--ink-3)', 'stroke-width': hot ? 2.2 : 1.1 }));
+          svg.append(S('line', { x1: x + 5, y1: y + i.h / 2, x2: x + i.w - 5, y2: y + i.h / 2, stroke: hot ? 'var(--amber)' : 'var(--ink-3)', 'stroke-width': 1.3 }));
+          return;
+        }
+        const id = i.t.id;
+        const c = (s.hl && s.hl[id]) || (s.cur === id ? 'amber' : path.has(id) ? 'blue' : null);
+        svg.append(S('rect', { x, y, width: i.w, height: i.h, rx: 9, fill: c ? `var(--${c}-soft)` : 'var(--sheet)', stroke: c ? `var(--${c})` : 'var(--ink)', 'stroke-width': c ? 2.3 : 1.4 }));
+        svg.append(T(X(i), y + 15.5, String(i.t.v), { size: 14, anchor: 'middle', weight: 700 }));
+        if (s.ann && s.ann[id] != null) svg.append(T(X(i) + i.w / 2 + 4, y + 2, 'h=' + s.ann[id], { size: 12, fill: 'var(--green)', weight: 700 }));
+      });
+      ui.stage.append(svg);
+    }
+    function render(i) {
+      const s = steps[i];
+      cb.hl(s.line);
+      drawTree(s);
+      framesEl.innerHTML = '';
+      (s.frames || []).forEach((f, k) => framesEl.append(el('div', { class: 'fr' + (k === s.frames.length - 1 ? ' top' : '') }, f)));
+      if (komp && !(s.frames || []).length) framesEl.append(el('div', { class: 'sv-empty' }, 'keine'));
+      outEl.innerHTML = '';
+      (s.out || []).forEach((v) => outEl.append(el('span', null, String(v))));
+      if (!(s.out || []).length) outEl.append(el('span', { style: 'border:0;background:none;color:var(--ink-3)' }, '–'));
+      const st0 = stats(s.tree);
+      statsEl.innerHTML = '';
+      const kv = (k, v) => statsEl.append(el('span', null, k), el('b', null, v));
+      kv('Knoten', String(st0.n));
+      kv('Blätter / innere', `${st0.leaves} / ${st0.inner}`);
+      kv('Höhe', st0.n ? String(st0.h) : '–');
+      kv('Ebenen', String(st0.h + 1));
+      kv('mindestens nötig', String(st0.minLevels) + ' Ebenen');
+      kv('Form', st0.n === 0 ? '–' : [st0.degen ? 'entartet' : null, st0.full ? 'vollständig' : null, st0.bal ? 'balanciert' : 'nicht balanciert'].filter(Boolean).join(', '));
+      ui.info.innerHTML = s.text;
+    }
+    const st = stepper(ui.ctrl, render);
+    function idle(text) { steps = []; frames = []; out = []; rec({ line: -1, text }); st.reset(1); }
+    function run(fn) { fn(); st.reset(steps.length, 0); }
+    preset.s.addEventListener('change', () => { load(preset.s.value); idle(`Baum geladen: Die Werte wurden in der Reihenfolge ${(BST_PRESETS[preset.s.value].vals).map(String).join(', ') || '(keine)'} eingefügt.`); });
+    bIns.addEventListener('click', () => run(() => opInsert(parseVal(valIn.value))));
+    bSearch.addEventListener('click', () => run(() => opSearch(parseVal(valIn.value))));
+    valIn.addEventListener('keydown', (e) => { if (e.key === 'Enter') run(() => opInsert(parseVal(valIn.value))); });
+    bTrav.addEventListener('click', () => run(() => opTrav(trav.s.value)));
+    bHeight.addEventListener('click', () => run(opHeight));
+    bBal.addEventListener('click', () => run(opBalance));
+    absBox.addEventListener('change', () => st.go(st.i));
+    load(cfg.preset || 'beispiel');
+    if (cfg.start === 'insert') run(() => opInsert(parseVal(valIn.value)));
+    else if (cfg.start === 'search') run(() => opSearch(parseVal(valIn.value)));
+    else if (cfg.start === 'height') run(opHeight);
+    else if (cfg.start === 'inorder') run(() => opTrav('in'));
+    else if (cfg.start === 'balance') run(opBalance);
+    else idle(cfg.intro || 'Gib einen Wert ein und drück <b>Einfügen</b> oder <b>Suchen</b>. Mit „Weiter ▶“ gehst du dann Vergleich für Vergleich durch.');
+  }
+
+  window.Viz = { recstack, hanoi, levy, queens, knapsack, sudoku, graphwalk, paths, maze, listops, stack, mice, guess, bst };
 })();

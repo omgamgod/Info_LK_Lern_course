@@ -1,14 +1,14 @@
 ---
-id: d1
-num: D1
-part: D
+id: e1
+num: E1
+part: E
 title: Spickzettel und Glossar
 short: Spickzettel
-lead: Alles aus den Kapiteln I und II auf einer Seite. Jedes Thema steht mit seiner Idee, seinem Muster in Pseudocode und Python und den Fehlern, die Punkte kosten. Das Glossar am Ende erklärt jeden Fachbegriff des Kurses. Nutz die Seite zum Wiederholen; jeder Abschnitt verweist auf die Lektion, in der das Thema ausführlich erklärt ist.
+lead: Alles aus den Kapiteln I bis III auf einer Seite. Jedes Thema steht mit seiner Idee, seinem Muster in Pseudocode und Python und den Fehlern, die Punkte kosten. Das Glossar am Ende erklärt jeden Fachbegriff des Kurses. Nutz die Seite zum Wiederholen; jeder Abschnitt verweist auf die Lektion, in der das Thema ausführlich erklärt ist.
 minutes: 45
-uses: [b1, b2, b3, b4, c1, c2, c3, c4]
+uses: [b1, b2, b3, b4, c1, c2, c3, c4, c5, d1, d2, d3]
 goals:
-  - das Muster jedes Algorithmus aus den Kapiteln I und II abrufen und aus dem Gedächtnis aufschreiben
+  - das Muster jedes Algorithmus aus den Kapiteln I bis III abrufen und aus dem Gedächtnis aufschreiben
   - jedem Fachbegriff seine Bedeutung zuordnen
   - die typischen Fehler kennen und wissen, wie man sie vermeidet
 ---
@@ -217,6 +217,78 @@ In welcher Klasse liegt das Rekursionsende von `LängeGeben()`, wenn die Liste e
 Der ABSCHLUSS antwortet 0, ohne einen weiteren Aufruf. Die Entscheidung zwischen Rekursionsschritt und Rekursionsende trifft die Klasse des empfangenden Objekts (Polymorphie), nicht ein `if`.
 :::
 
+## [logic] II.5 Stapel ([C5](#c5))
+
+**LIFO** (last in, first out): Ablegen und Herunternehmen nur **oben**. Der STAPEL **nutzt** eine LISTE (Assoziation, keine Vererbung) und gibt nur zwei Methoden weiter; oben = Anfang der Liste.
+
+:::bridge title="STAPEL delegiert an LISTE"
+methode VorneEinfügen(d)              || def VorneEinfuegen(self, dNeu):
+    liste.VorneEinfügen(d)            ||     self.liste.VorneEinfuegen(dNeu)
+methode AnfangEntfernen()             || def AnfangEntfernen(self):
+    return liste.AnfangEntfernen()    ||     return self.liste.AnfangEntfernen()
+>> Beim leeren Stapel kommt nichts zurück (der ABSCHLUSS liefert None). Die Warteschlange nutzt dieselbe Liste mit HintenEinfügen und AnfangEntfernen (FIFO).
+:::
+
+- **Aufrufstapel**: Jeder Methodenaufruf wird mit Objekt, Rücksprungstelle und lokalen Variablen oben abgelegt; nur der oberste arbeitet. Aufbau bis zur Abbruchbedingung, dann Abbau.
+- **Anwendungen**: Umkehren einer Reihenfolge, Rückgängig/Zurück, Klammerprüfung (öffnende ablegen, bei schließender die oberste herunternehmen und vergleichen, am Ende muss der Stapel leer sein), Rangiergleis, Patientenakte (neueste Behandlung oben).
+- **Ist eine Ausgabereihenfolge möglich?** Simulieren: ablegen, bis das gewünschte Element oben liegt; liegt es schon im Stapel, aber nicht oben, ist die Reihenfolge unmöglich (z. B. 3, 1, 2).
+
+## [logic] III.1 Bäume ([D1](#d1))
+
+- **Begriffe**: Wurzel (kein Vorgänger), Knoten, Kante, Vorgänger/Nachfolger, **Blatt** (kein Nachfolger), **innerer Knoten**, **Teilbaum**, Pfad. **Tiefe** eines Knotens = Kanten von der Wurzel; **Ebene** *i* = alle Knoten der Tiefe *i*; **Höhe** = größte Tiefe. *k* Knoten ⇒ *k* − 1 Kanten; ein Baum ist ein zusammenhängender, kreisfreier Graph.
+- **Geordneter Binärbaum**: höchstens zwei Nachfolger; für **jeden** Knoten liegen alle kleineren Schlüssel im linken, alle größeren im rechten **Teilbaum**. Wörter lexikographisch (Zeichen für Zeichen; cake < car; hero < heron).
+- **Formen**: **entartet** (jeder Knoten ≤ 1 Nachfolger, wie eine Liste), **vollständig** (alle Ebenen voll, 2ⁿ − 1 Knoten), **balanciert** (bei jedem Knoten unterscheiden sich die Höhen der Teilbäume um höchstens 1).
+- **Kapazität und Aufwand**: Ebene *i* fasst 2ⁱ Knoten, *n* Ebenen fassen 2ⁿ − 1. Mindestens nötig: kleinstes *n* mit 2ⁿ − 1 ≥ *k*. Höchstens so viele Vergleiche wie Ebenen (1000 → 10, 10⁶ → 20); eine Liste braucht bis zu *k*.
+- **Liste umstrukturieren**: mittleres Element wird Wurzel, rekursiv mit beiden Hälften; bei gerader Anzahl immer dieselbe Mitte wählen.
+
+| Ebenen *n* | 7 | 10 | 11 | 14 | 17 | 18 | 19 | 20 |
+|---|---|---|---|---|---|---|---|---|
+| 2ⁿ − 1 | 127 | 1 023 | 2 047 | 16 383 | 131 071 | 262 143 | 524 287 | 1 048 575 |
+
+## [logic] III.2 Suchen und Einfügen ([D2](#d2))
+
+- **Suchen**: an der Wurzel beginnen; gleich → gefunden; kleiner → links, größer → rechts weitersuchen; leerer Teilbaum → nicht gefunden. Endrekursiv, also auch als Schleife (Struktogramm mit `aktuell`).
+- **Einfügen**: denselben Weg gehen; wo die Suche enden würde, wird der neue Knoten als **Blatt** angehängt. Vorhandene Schlüssel werden nicht doppelt eingefügt.
+- **Reihenfolge**: Der erste Schlüssel wird die Wurzel; ein Knoten kann erst nach allen seinen Vorfahren eingefügt worden sein. Sortiertes Einfügen ⇒ entarteter Baum.
+- **Durchläufe**: **Inorder** (links, Knoten, rechts) = sortiert; **Preorder** (Knoten, links, rechts) baut beim Wiedereinfügen denselben Baum; **Postorder** (links, rechts, Knoten), z. B. für die Höhe.
+
+## [logic] III.3 Binärbaum mit Kompositum ([D3](#d3))
+
+:::diagram classes caption="Binärbaum als Kompositum"
+class BINBAUM @0,0 | wurzel: BAUMELEMENT | Einfügen(d); Suchen(s): DATENELEMENT
+abstract BAUMELEMENT @1.35,0 | | Einfügen(d): BAUMELEMENT {abstract}; Suchen(s): DATENELEMENT {abstract}
+class ABSCHLUSS @0.8,1.15 | | 
+class KNOTEN @1.95,1.15 | linkerNf; rechterNf; daten | 
+abstract DATENELEMENT @1.95,2.2 | | SchlüsselIstGleich(s); SchlüsselIstGrößerAls(s)
+assoc BINBAUM -> BAUMELEMENT : hat als Wurzel [1]
+inherit ABSCHLUSS -> BAUMELEMENT
+inherit KNOTEN -> BAUMELEMENT
+assoc KNOTEN -> BAUMELEMENT : hat als Nachfolger [2]
+assoc KNOTEN -> DATENELEMENT : verwaltet [1]
+:::
+
+| Methode | BINBAUM | KNOTEN | ABSCHLUSS |
+|---|---|---|---|
+| Einfügen(d) | wurzel = wurzel.Einfügen(d) | Schlüssel gleich: nichts; mein Schlüssel größer: linkerNf = linkerNf.Einfügen(d), sonst rechts; return selbst | return neu KNOTEN(d, neu ABSCHLUSS, neu ABSCHLUSS) |
+| Suchen(s) | return wurzel.Suchen(s) | gleich: return daten; größer: return linkerNf.Suchen(s); sonst rechterNf | return nichts |
+| IstVorhanden(s) | return wurzel.IstVorhanden(s) | wie Suchen, mit wahr statt daten | falsch |
+| AnzahlGeben() | return wurzel.AnzahlGeben() | 1 + links + rechts | 0 |
+| HöheGeben() | return wurzel.HöheGeben() | 1 + max(links, rechts) | −1 (Kanten zählen) bzw. 0 (Ebenen zählen) |
+| TiefeGeben(s) | return wurzel.TiefeGeben(s) | gleich: 0; sonst t vom passenden Nachfolger; t = −1 ? −1 : t + 1 | −1 |
+| InorderAusgeben() | wurzel.InorderAusgeben() | links; daten.InformationAusgeben(); rechts | – |
+
+Ein Baum mit *k* Knoten hat *k* + 1 Abschlüsse. Einfügen erzeugt einen Knoten und zwei Abschlüsse; ein Abschluss fällt weg. Die Vergleiche stehen im DATENELEMENT, damit der Baum für beliebige Daten funktioniert.
+
+:::quiz
+Was gibt ein ABSCHLUSS bei `HöheGeben()` zurück, wenn die Höhe als größte Tiefe (Anzahl der Kanten) definiert ist?
+- [ ] 0
+- [x] −1
+- [ ] 1
+- [ ] nichts
+--- explain
+Ein Blatt (Knoten mit zwei Abschlüssen) soll Höhe 0 haben: 1 + max(−1, −1) = 0. Gibt der Abschluss 0 zurück, zählt die Methode die Ebenen statt der Kanten.
+:::
+
 ## [logic] Diagramme in der Klausur
 
 | Diagramm | Muss enthalten | Typische Punktverluste |
@@ -226,8 +298,9 @@ Der ABSCHLUSS antwortet 0, ohne einen weiteren Aufruf. Die Entscheidung zwischen
 | **Sequenzdiagramm** | Objekte oben mit gestrichelten **Lebenslinien**, Aktivierungsbalken, Aufruf = durchgezogener Pfeil mit Methodenname, Rückgabe = gestrichelter Pfeil **mit dem zurückgegebenen Wert** | fehlende Rückgabewerte; das Objekt, das eine Nachricht empfängt, muss die nächste Nachricht von seiner eigenen Lebenslinie aus zeichnen |
 | **Aufrufbaum** | ein Kasten pro Aufruf mit seinen Parametern, Ergebnisse an die Kanten geschrieben | vergessen, dass Ergebnisse nach oben zurückwandern |
 | **Struktogramm** | Sequenz, falls (zwei Zweige), wiederhole solange / für | falsche Verschachtelung |
+| **Binärbaum** | Knoten als Kästchen mit Schlüssel, Kanten als Pfeile, linker und rechter Nachfolger eindeutig unterscheidbar (auch bei nur einem Nachfolger); im Kompositum-Objektdiagramm jeden Abschluss als eigenes Objekt | Einfügereihenfolge ignoriert; einen einzelnen Nachfolger mittig gezeichnet; nur die direkten Nachfolger statt des ganzen Teilbaums verglichen |
 
-## [logic] Die zehn teuersten Fehler
+## [logic] Die teuersten Fehler
 
 1. Kein Rekursionsende oder eines, das nie erreicht wird → `RecursionError` ([B1](#b1)).
 2. `return` vor dem rekursiven Aufruf vergessen → das Ergebnis geht verloren, `None` kommt zurück ([B1](#b1), [C3](#c3)).
@@ -239,6 +312,14 @@ Der ABSCHLUSS antwortet 0, ohne einen weiteren Aufruf. Die Entscheidung zwischen
 8. Beim Muster „neuen Rest zurückgeben“: `return self` vergessen oder `return self.nachfolger`, wo `return self` nötig ist ([C3](#c3), [C4](#c4)).
 9. Kompositum: die Assoziation KNOTEN → KNOTEN statt KNOTEN → LISTENELEMENT, oder mehrere ABSCHLUSS-Objekte ([C4](#c4)).
 10. Python: `self.` vor Attributen und Methoden vergessen, `=` statt `==`, falsche Einrückung ([A2](#a2), [A7](#a7)).
+
+Und für Stapel und Bäume:
+
+11. Stapel und Warteschlange verwechseln: Der Stapel fügt **vorne** ein (LIFO), die Warteschlange **hinten** (FIFO) ([C5](#c5)).
+12. Geordnet nur an den direkten Nachfolgern geprüft statt am ganzen Teilbaum ([D1](#d1)).
+13. Höhe und Anzahl der Ebenen verwechselt; 2ⁿ − 1 mit 2ⁿ verwechselt ([D1](#d1)).
+14. Beim Einfügen die Zuweisung `linkerNf = linkerNf.Einfügen(d)` oder das `return selbst` vergessen ([D3](#d3)).
+15. Bei `TiefeGeben` zu −1 noch 1 addiert ([D3](#d3)).
 
 ## [intro] Glossar
 
@@ -292,4 +373,17 @@ Die englischen Begriffe helfen dir, Pythons Fehlermeldungen und Dokumentation zu
 | **Multiplizität** | multiplicity | wie viele Objekte an einer Assoziation beteiligt sind | A7, C4 |
 | **Rückgabewert** | return value | Ergebnis, das mit `return` zurückgegeben wird | A5 |
 | **Parameter / lokale Variable** | parameter / local variable | Werte, die zu einem Aufruf gehören | A5 |
+| **Stapel** | stack (LIFO) | vorne (oben) einfügen und vorne entfernen | C5 |
+| **LIFO / FIFO** | last in, first out / first in, first out | Prinzip des Stapels / der Warteschlange | C5 |
+| **Baum** | tree | zusammenhängender, kreisfreier Graph mit einer Wurzel | D1 |
+| **Wurzel** | root | einziger Knoten ohne Vorgänger | D1 |
+| **Blatt / innerer Knoten** | leaf / inner node | Knoten ohne / mit Nachfolger | D1 |
+| **Teilbaum** | subtree | ein Knoten mit allen Knoten unter ihm | D1 |
+| **Tiefe, Ebene, Höhe** | depth, level, height | Kanten bis zur Wurzel; alle Knoten gleicher Tiefe; größte Tiefe | D1 |
+| **Binärbaum** | binary tree | jeder Knoten hat höchstens zwei Nachfolger (links, rechts) | D1 |
+| **geordneter Binärbaum** | binary search tree | links kleinere, rechts größere Schlüssel, für jeden Teilbaum | D1 |
+| **lexikographisch** | lexicographic | Ordnung wie im Wörterbuch, Zeichen für Zeichen | D1 |
+| **entartet / vollständig / balanciert** | degenerate / perfect / balanced | Kette / alle Ebenen voll / Höhenunterschied der Teilbäume höchstens 1 | D1 |
+| **Inorder / Preorder / Postorder** | in-order / pre-order / post-order traversal | Durchlaufreihenfolgen links–Knoten–rechts / Knoten zuerst / Knoten zuletzt | D2 |
+| **BAUMELEMENT** | tree element | abstrakte Komponente des Baum-Kompositums | D3 |
 | **GANZZAHL, KOMMAZAHL, ZEICHENKETTE, WAHRHEITSWERT** | int, float, str, bool | Datentypen in der Notation deines Kurses | A1 |

@@ -21,8 +21,9 @@ PARTS = [
     {"id": "0", "letter": "0", "title": "Start", "color": "#17804b", "desc": "Wie der Kurs funktioniert und was du am Ende können wirst.", "lessons": []},
     {"id": "A", "letter": "A", "title": "Python von null", "color": "#2445b5", "desc": "Alles, was du in Python brauchst, um die Kursthemen umzusetzen: Werte, Entscheidungen, Schleifen, Funktionen, Listen, Klassen, Referenzen, Vererbung.", "lessons": []},
     {"id": "B", "letter": "B", "title": "Rekursion", "color": "#6d3fc0", "desc": "Rekursion, Backtracking, Graphen und Tiefensuche, optimale Lösungen mit Tiefensuche.", "lessons": []},
-    {"id": "C", "letter": "C", "title": "Listen", "color": "#c8322b", "desc": "Warteschlange, Trennung von Struktur und Daten, einfach verkettete Liste und das Entwurfsmuster Kompositum.", "lessons": []},
-    {"id": "D", "letter": "D", "title": "Klausurvorbereitung", "color": "#a86a0b", "desc": "Spickzettel, gemischte Aufgaben über alle Themen und eine komplette Probeklausur mit Musterlösungen.", "lessons": []},
+    {"id": "C", "letter": "C", "title": "Listen", "color": "#c8322b", "desc": "Warteschlange, Trennung von Struktur und Daten, einfach verkettete Liste, das Entwurfsmuster Kompositum und der Stapel.", "lessons": []},
+    {"id": "D", "letter": "D", "title": "Bäume", "color": "#0b7a75", "desc": "Fachbegriffe rund um Bäume, der geordnete Binärbaum, Suchen und Einfügen, Aufwand und die Implementierung mit dem Kompositum.", "lessons": []},
+    {"id": "E", "letter": "E", "title": "Klausurvorbereitung", "color": "#a86a0b", "desc": "Spickzettel, gemischte Aufgaben über alle Themen und zwei komplette Probeklausuren mit Musterlösungen.", "lessons": []},
 ]
 
 PHASES = {"logic": "Logik", "bridge": "Brücke", "python": "Python", "exam": "Klausurtraining", "intro": "Überblick"}

@@ -1,4 +1,4 @@
-/* Static diagram renderers (SVG): graph, objects, classes, seq, struktogramm, calltree, matrix, board, metro. */
+/* Static diagram renderers (SVG): graph, objects, classes, seq, struktogramm, calltree, matrix, board, bintree, metro. */
 (() => {
   'use strict';
   const NS = 'http://www.w3.org/2000/svg';
@@ -169,7 +169,7 @@
     const id = 'o' + (++uid);
     const mk = { '->': arrowDefs(svg, id + 'a', 'var(--ink)'), '=>': arrowDefs(svg, id + 'n', 'var(--blue)'), '-x': arrowDefs(svg, id + 'x', 'var(--red)') };
     const arrowLayer = S('g');
-    function connect(x1, y1, target, rel) {
+    function connect(x1, y1, target, rel, src) {
       const t = byName[target];
       if (!t) {
         arrowLayer.append(text(x1 + 6, y1, target, { mono: true, size: 13 }));
@@ -194,6 +194,12 @@
           // target (mostly) below the source: drop down near the source's right edge
           x2 = Math.max(t.px + 20, Math.min(t.px + t.w - 24, x1 - 16));
           d = `M${x1},${y1} C${x1 + 40},${y1} ${x2},${y1 + (y2 - y1) * 0.45} ${x2},${y2 - 1}`;
+        } else if (src && t.py > src.py + src.h + 8) {
+          // target below and to the left: leave to the right, pass under the source box, then drop down
+          x2 = t.px + Math.min(40, t.w / 3);
+          const yb = src.py + src.h + Math.min(14, (t.py - src.py - src.h) / 2);
+          const r = 8;
+          d = `M${x1},${y1} H${x1 + 10} Q${x1 + 10 + r},${y1} ${x1 + 10 + r},${y1 + r} V${yb - r} Q${x1 + 10 + r},${yb} ${x1 + 10},${yb} H${x2 + r} Q${x2},${yb} ${x2},${yb + r} V${y2 - 1}`;
         } else {
           x2 = t.px + Math.min(40, t.w / 3);
           d = `M${x1},${y1} C${x1 + 50},${y1} ${x2},${y2 - 60} ${x2},${y2 - 1}`;
@@ -237,7 +243,7 @@
         } else {
           const cx = o.px + o.w - 14;
           g.append(S('circle', { cx, cy: y, r: 4, fill: a.rel === '=>' ? 'var(--blue)' : a.rel === '-x' ? 'var(--red)' : 'var(--ink)' }));
-          connect(cx + 4, y, a.target, a.rel);
+          connect(cx + 4, y, a.target, a.rel, o);
         }
       });
       svg.append(g);
@@ -679,6 +685,155 @@
     return svg;
   }
 
+  // ---------------------------------------------------------------- trees
+  // Bracket notation: 64(57(0(,30),),96(85(82(69,84),95),))  – binary: empty slot = missing child.
+  // Option lines before the tree:  abschluss: ja | ebenen: ja | nary: ja | pfad: 64, 96 | labels: kleiner | größer
+  // Node suffix {green|blue|amber|red|violet|grey|x} highlights a node; "a|b" breaks a label into two lines.
+  function parseTree(expr, nary) {
+    let i = 0;
+    const s = expr;
+    function ws() { while (i < s.length && /\s/.test(s[i])) i++; }
+    function label() {
+      ws();
+      let t = '';
+      if (s[i] === '"') { i++; while (i < s.length && s[i] !== '"') t += s[i++]; i++; }
+      else while (i < s.length && !'(),{'.includes(s[i])) t += s[i++];
+      t = t.trim();
+      let hl = null;
+      ws();
+      if (s[i] === '{') { i++; let h = ''; while (i < s.length && s[i] !== '}') h += s[i++]; i++; hl = h.trim(); }
+      return { t, hl };
+    }
+    function node() {
+      ws();
+      const { t, hl } = label();
+      if (!t) return null;
+      const n = { label: t, hl, kids: [] };
+      ws();
+      if (s[i] === '(') {
+        i++;
+        const kids = [];
+        let expectItem = true;
+        while (i < s.length) {
+          ws();
+          if (s[i] === ')') { if (expectItem && kids.length) kids.push(null); i++; break; }
+          if (s[i] === ',') { if (expectItem) kids.push(null); i++; expectItem = true; continue; }
+          kids.push(node());
+          expectItem = false;
+        }
+        n.kids = nary ? kids.filter(Boolean) : [kids[0] || null, kids[1] || null];
+      }
+      return n;
+    }
+    return node();
+  }
+  function bintree(src, fig) {
+    const lines = src.split('\n');
+    const opt = {};
+    let expr = '';
+    lines.forEach((l) => {
+      const m = l.match(/^\s*(abschluss|ebenen|nary|pfad|labels|tiefe|titel|breite)\s*:\s*(.*)$/i);
+      if (m) opt[m[1].toLowerCase()] = m[2].trim();
+      else expr += ' ' + l;
+    });
+    const yes = (k) => opt[k] && !/^(nein|no|0|false)$/i.test(opt[k]);
+    const nary = yes('nary');
+    const root = parseTree(expr.trim(), nary);
+    if (!root) return;
+    const showA = yes('abschluss') && !nary;
+    const path = new Set((opt.pfad || '').split(',').map((x) => x.trim()).filter(Boolean));
+    const edgeLabels = opt.labels ? opt.labels.split('|').map((x) => x.trim()) : null;
+    const FS = 14;
+    const gap = +(opt.breite || 14);
+    const nodes = [];
+    function prep(n, d) {
+      n.d = d;
+      n.lines = n.label.split('|');
+      n.w = Math.max(38, ...n.lines.map((ln) => tw(ln, FS, 'body', 700) + 22));
+      n.h = 14 + n.lines.length * 18;
+      nodes.push(n);
+      if (n.abschluss) return;
+      if (!nary && showA) n.kids = n.kids.length ? n.kids : [null, null];
+      n.kids = n.kids.map((k) => (k ? k : showA ? { label: '', abschluss: true, kids: [], hl: null } : null));
+      n.kids.forEach((k) => k && prep(k, d + 1));
+    }
+    prep(root, 0);
+    nodes.forEach((n) => { if (n.abschluss) { n.w = 22; n.h = 18; n.lines = []; } });
+    const LH = Math.max(...nodes.map((n) => n.h)) + 40;
+    let cursor = 0;
+    if (!nary) {
+      (function inorder(n) {
+        if (!n) return;
+        inorder(n.kids[0]);
+        n.x = cursor + n.w / 2;
+        cursor += n.w + gap;
+        inorder(n.kids[1]);
+      })(root);
+      // pull parents above their children when possible (keeps in-order, avoids overlap)
+    } else {
+      (function lay(n) {
+        const ks = n.kids.filter(Boolean);
+        if (!ks.length) { n.x = cursor + n.w / 2; cursor += n.w + gap; return; }
+        ks.forEach(lay);
+        n.x = (ks[0].x + ks[ks.length - 1].x) / 2;
+        if (n.x - n.w / 2 < 0) { const dx = n.w / 2 - n.x; (function sh(m) { m.x += dx; m.kids.forEach((k) => k && sh(k)); })(n); cursor += dx; }
+      })(root);
+    }
+    const maxD = Math.max(...nodes.map((n) => n.d));
+    const levelW = yes('ebenen') ? 96 : 0;
+    const W = Math.max(...nodes.map((n) => n.x + n.w / 2)) + 20 + levelW;
+    const H = 24 + maxD * LH + Math.max(...nodes.map((n) => n.h)) + 16;
+    const svg = svgRoot(W + 20, H, opt.titel || (nary ? 'Baum' : 'Binärbaum'));
+    const id = 'bt' + (++uid);
+    const mk = { ink: arrowDefs(svg, id + 'i', 'var(--ink-2)'), blue: arrowDefs(svg, id + 'b', 'var(--blue)'), red: arrowDefs(svg, id + 'r', 'var(--red)') };
+    const X = (n) => n.x + 20;
+    const Y = (n) => 24 + n.d * LH;
+    if (levelW) {
+      for (let d = 0; d <= maxD; d++) {
+        const y = 24 + d * LH + 16;
+        svg.append(S('line', { x1: 10, y1: y, x2: W - levelW + 14, y2: y, stroke: 'var(--rule)', 'stroke-dasharray': '3 5' }));
+        svg.append(text(W - levelW + 24, y, (opt.tiefe ? 'Tiefe ' : 'Ebene ') + d, { size: 13, fill: 'var(--ink-3)', weight: 700 }));
+      }
+    }
+    nodes.forEach((n) => {
+      n.kids.forEach((k, ki) => {
+        if (!k) return;
+        const onPath = path.has(n.label) && path.has(k.label);
+        const bad = k.hl === 'x';
+        const col = onPath ? 'var(--blue)' : bad ? 'var(--red)' : 'var(--ink-2)';
+        const x1 = X(n);
+        const y1 = Y(n) + n.h;
+        const x2 = X(k);
+        const y2 = Y(k) - 2;
+        svg.append(S('line', { x1, y1, x2, y2, stroke: col, 'stroke-width': onPath ? 2.6 : 1.5, 'marker-end': onPath ? mk.blue : bad ? mk.red : mk.ink, 'stroke-dasharray': k.abschluss ? '3 3' : null }));
+        if (edgeLabels && !k.abschluss) {
+          const lab = edgeLabels[nary ? 0 : ki] || '';
+          const mx = (x1 + x2) / 2 + (ki === 0 && !nary ? -8 : 8);
+          svg.append(text(mx, (y1 + y2) / 2, lab, { size: 12.5, anchor: ki === 0 && !nary ? 'end' : 'start', fill: 'var(--ink-3)', italic: true }));
+        }
+      });
+    });
+    nodes.forEach((n) => {
+      const x = X(n) - n.w / 2;
+      const y = Y(n);
+      if (n.abschluss) {
+        svg.append(S('rect', { x, y, width: n.w, height: n.h, rx: 3, fill: 'var(--sheet-2)', stroke: 'var(--ink-3)', 'stroke-width': 1.2 }));
+        svg.append(S('line', { x1: x + 5, y1: y + n.h / 2, x2: x + n.w - 5, y2: y + n.h / 2, stroke: 'var(--ink-3)', 'stroke-width': 1.4 }));
+        return;
+      }
+      const c = path.has(n.label) && !n.hl ? 'blue' : n.hl && n.hl !== 'x' ? n.hl : null;
+      const bad = n.hl === 'x';
+      svg.append(S('rect', { x, y, width: n.w, height: n.h, rx: 9, fill: c ? SOFT[c] : bad ? 'var(--red-soft)' : 'var(--sheet)', stroke: c ? COLORS[c] : bad ? 'var(--red)' : 'var(--ink)', 'stroke-width': c || bad ? 2.2 : 1.4 }));
+      n.lines.forEach((ln, li) => svg.append(text(X(n), y + 16 + li * 18, ln, { size: FS, anchor: 'middle', weight: li === 0 ? 700 : 400 })));
+    });
+    if (showA) {
+      const lx = 20;
+      svg.append(S('rect', { x: lx, y: H - 22, width: 22, height: 14, rx: 3, fill: 'var(--sheet-2)', stroke: 'var(--ink-3)' }));
+      svg.append(text(lx + 30, H - 15, '= ABSCHLUSS', { size: 12, fill: 'var(--ink-3)' }));
+    }
+    place(fig, svg);
+  }
+
   // ---------------------------------------------------------------- course map (metro style)
   function metro(host, C, statusFn) {
     const parts = C.parts;
@@ -748,10 +903,10 @@
   }
 
   function render(kind, src, fig) {
-    const f = { graph, objects, classes, seq, struktogramm, calltree, matrix, board }[kind];
+    const f = { graph, objects, classes, seq, struktogramm, calltree, matrix, board, bintree }[kind];
     if (!f) throw new Error('Unknown diagram ' + kind);
     f(src, fig);
   }
 
-  window.Diagrams = { render, metro, graph, board, S, text, tw, arrowDefs, svgRoot, COLORS, SOFT };
+  window.Diagrams = { render, metro, graph, board, bintree, parseTree, S, text, tw, arrowDefs, svgRoot, COLORS, SOFT };
 })();

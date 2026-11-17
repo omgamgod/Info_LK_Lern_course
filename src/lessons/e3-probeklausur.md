@@ -1,12 +1,12 @@
 ---
-id: d3
-num: D3
-part: D
-title: Probeklausur
-short: Probeklausur
+id: e3
+num: E3
+part: E
+title: Probeklausur 1
+short: Probeklausur 1
 lead: Eine vollständige Probeklausur zu den Kapiteln I und II im Stil einer Q12-Klausur. 60 Punkte, 90 Minuten, auf Papier. Jede Aufgabe hat eine Musterlösung mit einer Punkteverteilung, wie eine Lehrkraft sie vornehmen würde. Danach kannst du deinen Code mit den Python-Blöcken am Ende prüfen.
 minutes: 120
-uses: [d1, d2]
+uses: [e1, e2]
 goals:
   - eine vollständige Klausur zu Rekursion und Listen unter Zeitdruck lösen
   - die eigenen Antworten anhand von Musterlösungen mit Punkteverteilung bewerten
@@ -321,7 +321,7 @@ In einem Bereich viele Punkte verloren? Wiederhole diese Lektionen:
 
 - 1 a, b, e → [B1](#b1) (Aufrufbaum, Abbruchbedingung, baumartige Rekursion); 1 c → B1, Abschnitt *Arten der Rekursion*; 1 d → Python-Blöcke in B1
 - 2 a–d → [B3](#b3); 2 e, f → [B4](#b4)
-- 3 a, b → [C4](#c4) (Klassen- und Objektdiagramm); 3 c, d → C4 und [D2](#d2); 3 e → [C3](#c3) (den neuen Rest zurückgeben)
+- 3 a, b → [C4](#c4) (Klassen- und Objektdiagramm); 3 c, d → C4 und [E2](#e2); 3 e → [C3](#c3) (den neuen Rest zurückgeben)
 
 ## [python] Prüf deinen Code
 

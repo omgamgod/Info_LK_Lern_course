@@ -1,7 +1,7 @@
 # Rekursion & Listen – offline version
 
-Interactive course for Informatik Q12 (Kurs 2INF1): Python from zero, Rekursion, Listen
-and exam preparation. 21 lessons, 101 Python blocks with automatic checks, quizzes,
+Interactive course for Informatik Q12 (Kurs 2INF1): Python from zero, Rekursion, Listen,
+Stapel, Bäume and exam preparation. 26 lessons, 128 Python blocks with automatic checks, quizzes,
 exam tasks and step-by-step visualisations. The course itself is in German.
 
 This folder is the complete course: the unzipped offline package, or the `docs/` folder

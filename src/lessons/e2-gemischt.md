@@ -1,17 +1,18 @@
 ---
-id: d2
-num: D2
-part: D
+id: e2
+num: E2
+part: E
 title: Gemischte Aufgaben
 short: Gemischte Aufgaben
-lead: Klausuraufgaben bleiben selten innerhalb einer Lektion. Diese Blöcke verbinden Themen, z. B. eine Breitensuche mit deiner eigenen Warteschlange, eine Wegzählung durch Rekursion mit Rückgabewerten oder Rekursion auf einer Kompositum-Liste in einer Richtung, die du noch nicht geübt hast. Jeder Block nennt die Lektionen, auf die er zurückgreift.
+lead: Klausuraufgaben bleiben selten innerhalb einer Lektion. Diese Blöcke verbinden Themen, z. B. eine Breitensuche mit deiner eigenen Warteschlange, eine Wegzählung durch Rekursion mit Rückgabewerten, Rekursion auf einer Kompositum-Liste in einer Richtung, die du noch nicht geübt hast, eine Tiefensuche mit einem Stapel oder einen Baum, der seine Daten in eine Liste schreibt. Jeder Block nennt die Lektionen, auf die er zurückgreift.
 minutes: 100
-uses: [b1, b3, b4, c1, c2, c4]
+uses: [b1, b3, b4, c1, c2, c4, c5, d3]
 goals:
   - Warteschlange, Graph und Rekursion in einem Programm verbinden
   - rekursive Methoden schreiben, die Rückgabewerte verknüpfen (Wege zählen)
   - entscheiden, an welcher Stelle einer rekursiven Methode die eigene Arbeit passiert (vor oder nach dem rekursiven Aufruf)
   - die Kompositum-Liste wiederverwenden, um andere Strukturen zu bauen
+  - den Aufrufstapel einer Rekursion durch einen eigenen Stapel ersetzen
 ---
 
 ## [intro] So funktionieren diese Blöcke
@@ -828,6 +829,574 @@ Jede Methode ist eine Zeile, die eine Methode von `self.liste` aufruft.
 Alle Sonderfälle, die C1 brauchte (leere Warteschlange, ein Element, `ende` zurücksetzen), erledigt der ABSCHLUSS. Der Preis: HintenEinfuegen durchläuft die ganze Liste, während die Warteschlange aus C1 mit `ende` direkt ans Ende sprang. Was wichtiger ist, hängt von der Anwendung ab.
 :::
 
+## [python] Stapel und Bäume
+
+Diese Blöcke verbinden Kapitel III und II.5 mit den früheren Themen.
+
+:::exercise id=e2-dfs-stapel title="Tiefensuche mit einem Stapel statt Rekursion (B3 + C5)" level=2
+Der Computer verwaltet die Aufrufe einer rekursiven Tiefensuche auf seinem Aufrufstapel. Man kann diesen Stapel auch selbst verwalten. Implementiere `TiefensucheMitStapel(start)` ohne Rekursion:
+
+1. Leg den Startknoten (seine Nummer) auf einen `Stapel`.
+2. Solange der Stapel nicht leer ist: Nimm die oberste Nummer *k* herunter. Ist *k* schon besucht, mach weiter. Sonst markiere *k* als besucht, häng seinen Namen an das Ergebnis an und lege alle noch nicht besuchten Nachbarn auf den Stapel, und zwar **in absteigender Reihenfolge** (größte Nummer zuerst).
+
+Gib die Liste der Knotennamen zurück. Sie soll dieselbe Reihenfolge haben wie die rekursive Tiefensuche aus B3 (gegeben zum Vergleich).
+--- starter
+class Abschluss:
+    def DatenelementGeben(self):
+        return None
+
+    def NachfolgerGeben(self):
+        return self
+
+
+class Knoten:
+    def __init__(self, dNeu, lNeu):
+        self.daten = dNeu
+        self.nachfolger = lNeu
+
+    def DatenelementGeben(self):
+        return self.daten
+
+    def NachfolgerGeben(self):
+        return self.nachfolger
+
+
+class Stapel:
+    def __init__(self):
+        self.anfang = Abschluss()
+
+    def VorneEinfuegen(self, dNeu):
+        self.anfang = Knoten(dNeu, self.anfang)
+
+    def AnfangEntfernen(self):
+        d = self.anfang.DatenelementGeben()
+        self.anfang = self.anfang.NachfolgerGeben()
+        return d
+
+    def IstLeer(self):
+        return isinstance(self.anfang, Abschluss)
+
+
+class GraphMatrix:
+    def __init__(self, namen, kanten):
+        self.knoten = list(namen)
+        self.matrix = [[-1] * len(namen) for i in range(len(namen))]
+        for a, b in kanten:
+            i, j = self.knoten.index(a), self.knoten.index(b)
+            self.matrix[i][j] = 1
+            self.matrix[j][i] = 1
+
+    def TiefensucheRekursiv(self, start):
+        besucht = [False] * len(self.knoten)
+        ergebnis = []
+
+        def KnotenBesuchen(k):
+            besucht[k] = True
+            ergebnis.append(self.knoten[k])
+            for i in range(len(self.knoten)):
+                if self.matrix[k][i] != -1 and not besucht[i]:
+                    KnotenBesuchen(i)
+
+        KnotenBesuchen(self.knoten.index(start))
+        return ergebnis
+
+    def TiefensucheMitStapel(self, start):
+        besucht = [False] * len(self.knoten)
+        ergebnis = []
+        stapel = Stapel()
+        # dein Code
+        return ergebnis
+
+
+K7 = GraphMatrix(["K1", "K2", "K3", "K4", "K5", "K6", "K7"],
+                 [("K1", "K2"), ("K1", "K7"), ("K1", "K6"), ("K2", "K3"), ("K7", "K3"), ("K6", "K5"), ("K3", "K4"), ("K5", "K4")])
+print(K7.TiefensucheRekursiv("K1"))
+print(K7.TiefensucheMitStapel("K1"))
+--- solution
+class Abschluss:
+    def DatenelementGeben(self):
+        return None
+
+    def NachfolgerGeben(self):
+        return self
+
+
+class Knoten:
+    def __init__(self, dNeu, lNeu):
+        self.daten = dNeu
+        self.nachfolger = lNeu
+
+    def DatenelementGeben(self):
+        return self.daten
+
+    def NachfolgerGeben(self):
+        return self.nachfolger
+
+
+class Stapel:
+    def __init__(self):
+        self.anfang = Abschluss()
+
+    def VorneEinfuegen(self, dNeu):
+        self.anfang = Knoten(dNeu, self.anfang)
+
+    def AnfangEntfernen(self):
+        d = self.anfang.DatenelementGeben()
+        self.anfang = self.anfang.NachfolgerGeben()
+        return d
+
+    def IstLeer(self):
+        return isinstance(self.anfang, Abschluss)
+
+
+class GraphMatrix:
+    def __init__(self, namen, kanten):
+        self.knoten = list(namen)
+        self.matrix = [[-1] * len(namen) for i in range(len(namen))]
+        for a, b in kanten:
+            i, j = self.knoten.index(a), self.knoten.index(b)
+            self.matrix[i][j] = 1
+            self.matrix[j][i] = 1
+
+    def TiefensucheRekursiv(self, start):
+        besucht = [False] * len(self.knoten)
+        ergebnis = []
+
+        def KnotenBesuchen(k):
+            besucht[k] = True
+            ergebnis.append(self.knoten[k])
+            for i in range(len(self.knoten)):
+                if self.matrix[k][i] != -1 and not besucht[i]:
+                    KnotenBesuchen(i)
+
+        KnotenBesuchen(self.knoten.index(start))
+        return ergebnis
+
+    def TiefensucheMitStapel(self, start):
+        besucht = [False] * len(self.knoten)
+        ergebnis = []
+        stapel = Stapel()
+        stapel.VorneEinfuegen(self.knoten.index(start))
+        while not stapel.IstLeer():
+            k = stapel.AnfangEntfernen()
+            if besucht[k]:
+                continue
+            besucht[k] = True
+            ergebnis.append(self.knoten[k])
+            for i in range(len(self.knoten) - 1, -1, -1):
+                if self.matrix[k][i] != -1 and not besucht[i]:
+                    stapel.VorneEinfuegen(i)
+        return ergebnis
+
+
+K7 = GraphMatrix(["K1", "K2", "K3", "K4", "K5", "K6", "K7"],
+                 [("K1", "K2"), ("K1", "K7"), ("K1", "K6"), ("K2", "K3"), ("K7", "K3"), ("K6", "K5"), ("K3", "K4"), ("K5", "K4")])
+print(K7.TiefensucheRekursiv("K1"))
+print(K7.TiefensucheMitStapel("K1"))
+--- tests
+import ast, random
+
+@test("K7 wie die rekursive Tiefensuche")
+def _():
+    K = GraphMatrix(["K1", "K2", "K3", "K4", "K5", "K6", "K7"],
+                    [("K1", "K2"), ("K1", "K7"), ("K1", "K6"), ("K2", "K3"), ("K7", "K3"), ("K6", "K5"), ("K3", "K4"), ("K5", "K4")])
+    for s in ["K1", "K4", "K7"]:
+        eq(K.TiefensucheMitStapel(s), K.TiefensucheRekursiv(s), "TiefensucheMitStapel(%r)" % s)
+
+@test("Zufällige Graphen")
+def _():
+    rnd = random.Random(7)
+    for t in range(40):
+        n = rnd.randint(1, 8)
+        namen = ["N%d" % i for i in range(n)]
+        kanten = [(namen[a], namen[b]) for a in range(n) for b in range(a + 1, n) if rnd.random() < 0.4]
+        g = GraphMatrix(namen, kanten)
+        s = rnd.choice(namen)
+        eq(g.TiefensucheMitStapel(s), g.TiefensucheRekursiv(s), "Graph %d: Kanten %s, Start %s" % (t, kanten, s))
+
+@test("Ohne Rekursion")
+def _():
+    for node in ast.walk(ast.parse(SOURCE)):
+        if isinstance(node, ast.FunctionDef) and node.name == "TiefensucheMitStapel":
+            calls = {n.func.attr for n in ast.walk(node) if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)}
+            ok("TiefensucheMitStapel" not in calls and "TiefensucheRekursiv" not in calls, "Verwende den Stapel, keinen rekursiven Aufruf")
+            ok("VorneEinfuegen" in calls and "AnfangEntfernen" in calls, "Verwende den Stapel")
+--- hint
+Schleife: `while not stapel.IstLeer():`, darin `k = stapel.AnfangEntfernen()`. Ist `besucht[k]`, geht es mit `continue` zur nächsten Runde.
+--- hint
+Absteigend: `for i in range(len(self.knoten) - 1, -1, -1):`. Der kleinste Nachbar liegt dann oben und wird als Nächstes besucht, genau wie bei der rekursiven Version.
+--- explain
+Der eigene Stapel übernimmt die Rolle des Aufrufstapels: Was oben liegt, wird als Nächstes bearbeitet. Mit einer **Warteschlange** statt des Stapels (und Markieren beim Einreihen) wird daraus die Breitensuche. Stapel und Warteschlange machen genau den Unterschied zwischen Tiefen- und Breitensuche aus.
+:::
+
+:::exercise id=e2-baum-liste title="Vom Baum in die Liste (D3 + C4)" level=2
+Ein Wörterbuch ist als Kompositum-Baum gespeichert, eine Vokabelliste als Kompositum-Liste (beide gegeben). Schreib `InListeSchreiben(liste)` in `BinBaum`, `Knoten` und `Abschluss`: Alle Einträge sollen **alphabetisch** mit `liste.HintenEinfuegen(...)` in die Liste kommen.
+--- starter
+from abc import ABC, abstractmethod
+
+
+class Eintrag:
+    def __init__(self, wort):
+        self.wort = wort
+
+    def SchluesselIstGleich(self, s):
+        return self.wort == s
+
+    def SchluesselIstGroesserAls(self, s):
+        return self.wort > s
+
+    def SchluesselAlsStringGeben(self):
+        return self.wort
+
+
+# ---------- Kompositum-Liste (C4) ----------
+class LAbschluss:
+    def HintenEinfuegen(self, d):
+        return LKnoten(d, self)
+
+    def WoerterGeben(self):
+        return []
+
+
+class LKnoten:
+    def __init__(self, d, nf):
+        self.daten = d
+        self.nachfolger = nf
+
+    def HintenEinfuegen(self, d):
+        self.nachfolger = self.nachfolger.HintenEinfuegen(d)
+        return self
+
+    def WoerterGeben(self):
+        return [self.daten.wort] + self.nachfolger.WoerterGeben()
+
+
+class Liste:
+    def __init__(self):
+        self.anfang = LAbschluss()
+
+    def HintenEinfuegen(self, d):
+        self.anfang = self.anfang.HintenEinfuegen(d)
+
+    def WoerterGeben(self):
+        return self.anfang.WoerterGeben()
+
+
+# ---------- Kompositum-Baum (D3) ----------
+class Baumelement(ABC):
+    @abstractmethod
+    def Einfuegen(self, d):
+        pass
+
+    @abstractmethod
+    def InListeSchreiben(self, liste):
+        pass
+
+
+class Abschluss(Baumelement):
+    def Einfuegen(self, d):
+        return Knoten(d, Abschluss(), Abschluss())
+
+    def InListeSchreiben(self, liste):
+        pass
+
+
+class Knoten(Baumelement):
+    def __init__(self, d, li, re):
+        self.daten = d
+        self.linkerNachfolger = li
+        self.rechterNachfolger = re
+
+    def Einfuegen(self, d):
+        s = d.SchluesselAlsStringGeben()
+        if self.daten.SchluesselIstGleich(s):
+            return self
+        if self.daten.SchluesselIstGroesserAls(s):
+            self.linkerNachfolger = self.linkerNachfolger.Einfuegen(d)
+        else:
+            self.rechterNachfolger = self.rechterNachfolger.Einfuegen(d)
+        return self
+
+    def InListeSchreiben(self, liste):
+        pass
+
+
+class BinBaum:
+    def __init__(self):
+        self.wurzel = Abschluss()
+
+    def Einfuegen(self, d):
+        self.wurzel = self.wurzel.Einfuegen(d)
+
+    def InListeSchreiben(self, liste):
+        pass
+
+
+baum = BinBaum()
+for w in ["clip", "cat", "cup", "cut", "cube"]:
+    baum.Einfuegen(Eintrag(w))
+vokabeln = Liste()
+baum.InListeSchreiben(vokabeln)
+print(vokabeln.WoerterGeben())
+--- solution
+from abc import ABC, abstractmethod
+
+
+class Eintrag:
+    def __init__(self, wort):
+        self.wort = wort
+
+    def SchluesselIstGleich(self, s):
+        return self.wort == s
+
+    def SchluesselIstGroesserAls(self, s):
+        return self.wort > s
+
+    def SchluesselAlsStringGeben(self):
+        return self.wort
+
+
+# ---------- Kompositum-Liste (C4) ----------
+class LAbschluss:
+    def HintenEinfuegen(self, d):
+        return LKnoten(d, self)
+
+    def WoerterGeben(self):
+        return []
+
+
+class LKnoten:
+    def __init__(self, d, nf):
+        self.daten = d
+        self.nachfolger = nf
+
+    def HintenEinfuegen(self, d):
+        self.nachfolger = self.nachfolger.HintenEinfuegen(d)
+        return self
+
+    def WoerterGeben(self):
+        return [self.daten.wort] + self.nachfolger.WoerterGeben()
+
+
+class Liste:
+    def __init__(self):
+        self.anfang = LAbschluss()
+
+    def HintenEinfuegen(self, d):
+        self.anfang = self.anfang.HintenEinfuegen(d)
+
+    def WoerterGeben(self):
+        return self.anfang.WoerterGeben()
+
+
+# ---------- Kompositum-Baum (D3) ----------
+class Baumelement(ABC):
+    @abstractmethod
+    def Einfuegen(self, d):
+        pass
+
+    @abstractmethod
+    def InListeSchreiben(self, liste):
+        pass
+
+
+class Abschluss(Baumelement):
+    def Einfuegen(self, d):
+        return Knoten(d, Abschluss(), Abschluss())
+
+    def InListeSchreiben(self, liste):
+        pass
+
+
+class Knoten(Baumelement):
+    def __init__(self, d, li, re):
+        self.daten = d
+        self.linkerNachfolger = li
+        self.rechterNachfolger = re
+
+    def Einfuegen(self, d):
+        s = d.SchluesselAlsStringGeben()
+        if self.daten.SchluesselIstGleich(s):
+            return self
+        if self.daten.SchluesselIstGroesserAls(s):
+            self.linkerNachfolger = self.linkerNachfolger.Einfuegen(d)
+        else:
+            self.rechterNachfolger = self.rechterNachfolger.Einfuegen(d)
+        return self
+
+    def InListeSchreiben(self, liste):
+        self.linkerNachfolger.InListeSchreiben(liste)
+        liste.HintenEinfuegen(self.daten)
+        self.rechterNachfolger.InListeSchreiben(liste)
+
+
+class BinBaum:
+    def __init__(self):
+        self.wurzel = Abschluss()
+
+    def Einfuegen(self, d):
+        self.wurzel = self.wurzel.Einfuegen(d)
+
+    def InListeSchreiben(self, liste):
+        self.wurzel.InListeSchreiben(liste)
+
+
+baum = BinBaum()
+for w in ["clip", "cat", "cup", "cut", "cube"]:
+    baum.Einfuegen(Eintrag(w))
+vokabeln = Liste()
+baum.InListeSchreiben(vokabeln)
+print(vokabeln.WoerterGeben())
+--- tests
+def baue(*worte):
+    b = BinBaum()
+    for w in worte:
+        b.Einfuegen(Eintrag(w))
+    return b
+
+@test("Alphabetisch in die Liste")
+def _():
+    l = Liste()
+    baue("clip", "cat", "cup", "cut", "cube", "cave", "crab").InListeSchreiben(l)
+    eq(l.WoerterGeben(), ["cat", "cave", "clip", "crab", "cube", "cup", "cut"], "Wörter in der Liste")
+
+@test("Leerer Baum, volle Liste")
+def _():
+    l = Liste()
+    l.HintenEinfuegen(Eintrag("aaa"))
+    BinBaum().InListeSchreiben(l)
+    eq(l.WoerterGeben(), ["aaa"], "ein leerer Baum fügt nichts hinzu")
+    baue("zz", "bb").InListeSchreiben(l)
+    eq(l.WoerterGeben(), ["aaa", "bb", "zz"], "die Einträge kommen hinten dazu")
+
+@test("Dieselben Objekte, keine Kopien")
+def _():
+    b = BinBaum()
+    e = Eintrag("solo")
+    b.Einfuegen(e)
+    l = Liste()
+    b.InListeSchreiben(l)
+    ok(l.anfang.daten is e, "die Liste soll das Eintrag-Objekt aus dem Baum enthalten")
+--- hint
+Das ist ein Inorder-Durchlauf (D2): links, eigene Daten mit `liste.HintenEinfuegen(self.daten)`, rechts. Der Abschluss tut nichts.
+--- explain
+Baum und Liste teilen sich die Datenelemente: Die Trennung von Struktur und Daten (C2) erlaubt, dieselben Objekte in zwei verschiedenen Strukturen zu verwalten. Inorder plus HintenEinfügen ergibt eine sortierte Liste.
+:::
+
+:::exercise id=e2-aufrufstapel title="Rekursion von Hand: Fakultät mit einem Stapel (B1 + C5)" level=1
+Berechne `n!` **ohne Rekursion** so, wie der Computer es mit dem Aufrufstapel tut: Leg zuerst n, n − 1, …, 1 auf einen Stapel (der Abstieg), dann nimm alle Zahlen wieder herunter und multipliziere sie (der Aufstieg). `FakultaetMitStapel(0)` ist 1.
+--- starter
+class Abschluss:
+    def DatenelementGeben(self):
+        return None
+
+    def NachfolgerGeben(self):
+        return self
+
+
+class Knoten:
+    def __init__(self, dNeu, lNeu):
+        self.daten = dNeu
+        self.nachfolger = lNeu
+
+    def DatenelementGeben(self):
+        return self.daten
+
+    def NachfolgerGeben(self):
+        return self.nachfolger
+
+
+class Stapel:
+    def __init__(self):
+        self.anfang = Abschluss()
+
+    def VorneEinfuegen(self, dNeu):
+        self.anfang = Knoten(dNeu, self.anfang)
+
+    def AnfangEntfernen(self):
+        d = self.anfang.DatenelementGeben()
+        self.anfang = self.anfang.NachfolgerGeben()
+        return d
+
+    def IstLeer(self):
+        return isinstance(self.anfang, Abschluss)
+
+
+def FakultaetMitStapel(n):
+    pass
+
+
+print(FakultaetMitStapel(5))
+--- solution
+class Abschluss:
+    def DatenelementGeben(self):
+        return None
+
+    def NachfolgerGeben(self):
+        return self
+
+
+class Knoten:
+    def __init__(self, dNeu, lNeu):
+        self.daten = dNeu
+        self.nachfolger = lNeu
+
+    def DatenelementGeben(self):
+        return self.daten
+
+    def NachfolgerGeben(self):
+        return self.nachfolger
+
+
+class Stapel:
+    def __init__(self):
+        self.anfang = Abschluss()
+
+    def VorneEinfuegen(self, dNeu):
+        self.anfang = Knoten(dNeu, self.anfang)
+
+    def AnfangEntfernen(self):
+        d = self.anfang.DatenelementGeben()
+        self.anfang = self.anfang.NachfolgerGeben()
+        return d
+
+    def IstLeer(self):
+        return isinstance(self.anfang, Abschluss)
+
+
+def FakultaetMitStapel(n):
+    s = Stapel()
+    while n > 0:
+        s.VorneEinfuegen(n)
+        n = n - 1
+    ergebnis = 1
+    while not s.IstLeer():
+        ergebnis = ergebnis * s.AnfangEntfernen()
+    return ergebnis
+
+
+print(FakultaetMitStapel(5))
+--- tests
+import ast
+
+@test("Werte")
+def _():
+    for n, f in [(0, 1), (1, 1), (3, 6), (5, 120), (10, 3628800)]:
+        eq(FakultaetMitStapel(n), f, "FakultaetMitStapel(%d)" % n)
+
+@test("Mit Stapel, ohne Rekursion")
+def _():
+    for node in ast.parse(SOURCE).body:
+        if isinstance(node, ast.FunctionDef) and node.name == "FakultaetMitStapel":
+            calls = {(n.func.attr if isinstance(n.func, ast.Attribute) else getattr(n.func, "id", "")) for n in ast.walk(node) if isinstance(n, ast.Call)}
+            ok("FakultaetMitStapel" not in calls, "ohne rekursiven Aufruf")
+            ok("VorneEinfuegen" in calls and "AnfangEntfernen" in calls, "lege die Zahlen auf den Stapel und nimm sie wieder herunter")
+--- hint
+Erste Schleife: solange `n > 0`, `n` ablegen und um 1 verringern. Zweite Schleife: solange der Stapel nicht leer ist, herunternehmen und multiplizieren. Starte mit `ergebnis = 1` (das Rekursionsende).
+--- explain
+Die erste Schleife entspricht dem Abstieg (jeder Aufruf `Fakultät(k)` legt seinen Parameter k ab), die zweite dem Aufstieg (jeder Aufruf multipliziert mit seinem k, sobald das Ergebnis von unten kommt). Der Startwert 1 ist das Rekursionsende `Fakultät(0) = 1`.
+:::
+
 ## [exam] Klausurtraining
 
 :::exam title="Code lesen" points=4
@@ -852,3 +1421,79 @@ Ein Bahnnetz ist als Graph gespeichert (Bahnhöfe = Knoten, direkte Verbindungen
 --- solution
 Die **Breitensuche**: Sie besucht die Knoten in der Reihenfolge ihrer Entfernung (Zahl der Kanten) vom Start: zuerst alle Bahnhöfe einen Halt entfernt, dann alle Bahnhöfe zwei Halte entfernt und so weiter. Wird ein Knoten zum ersten Mal erreicht, dann mit der kleinsten Zahl von Schritten. Sie verwendet eine **Warteschlange** (FIFO). Eine Tiefensuche folgt einem Zweig so tief wie möglich und erreicht einen Bahnhof eventuell zuerst über einen langen Umweg.
 :::
+
+:::exam title="Welche Struktur passt?" points=4
+Gib jeweils an, ob ein **Stapel**, eine **Warteschlange** oder ein **geordneter Binärbaum** am besten passt, und begründe in einem Satz.
+
+a) Ein Texteditor soll die letzten Änderungen der Reihe nach rückgängig machen können.
+
+b) Ein Drucker im Netz bekommt Aufträge von mehreren Rechnern.
+
+c) Eine Bibliothek will zu einer Signatur schnell das Buch finden; es kommen laufend neue Bücher dazu.
+
+d) Ein Programm prüft, ob in einem Term jede Klammer `(` zu einer passenden `)` geschlossen wird.
+--- solution
+a) **Stapel**: Die zuletzt gemachte Änderung wird als erste zurückgenommen (LIFO).
+
+b) **Warteschlange**: Wer zuerst druckt, kommt zuerst dran (FIFO), niemand wird übergangen.
+
+c) **Geordneter Binärbaum**: Suchen und Einfügen brauchen bei einem ausgeglichenen Baum nur so viele Vergleiche, wie der Baum Ebenen hat (rund log₂ n statt n wie in einer Liste).
+
+d) **Stapel**: Jede `(` wird abgelegt, jede `)` nimmt die oberste herunter. Ist der Stapel dabei leer oder am Ende nicht leer, passen die Klammern nicht.
+:::
+
+::::exam title="Preorder mit einem Stapel" points=4
+Ein Baum soll ohne Rekursion in **Preorder** durchlaufen werden. Dazu wird die Wurzel auf einen Stapel gelegt. Solange der Stapel nicht leer ist, wird das oberste Element heruntergenommen und ausgegeben; danach werden erst sein **rechter**, dann sein **linker** Nachfolger abgelegt (sofern vorhanden).
+:::diagram bintree
+8(3(1,6),10(,14))
+:::
+a) Gib nach jedem Herunternehmen die Ausgabe und den Inhalt des Stapels an (oberstes Element links).
+
+b) Warum wird zuerst der rechte Nachfolger abgelegt?
+--- solution
+a)
+
+| heruntergenommen / Ausgabe | Stapel danach |
+|---|---|
+| 8 | 3, 10 |
+| 3 | 1, 6, 10 |
+| 1 | 6, 10 |
+| 6 | 10 |
+| 10 | 14 |
+| 14 | (leer) |
+
+Ausgabe: **8, 3, 1, 6, 10, 14**, genau die Preorder.
+
+b) Der Stapel gibt das zuletzt abgelegte Element zuerst heraus. Damit der **linke** Teilbaum vor dem rechten bearbeitet wird (wie bei der rekursiven Preorder), muss der linke Nachfolger **oben** liegen, also als Letzter abgelegt werden.
+::::
+
+::::exam title="Sortierte Daten ausgeglichen einfügen" points=5
+Die Zahlen 1 bis 7 liegen sortiert vor und sollen in einen leeren geordneten Binärbaum eingefügt werden.
+
+a) Zeichne den Baum, wenn sie in der Reihenfolge 1, 2, …, 7 eingefügt werden. Wie viele Ebenen hat er?
+
+b) Die Methode `MitteEinfuegen(zahlen, von, bis)` fügt zuerst das mittlere Element des Bereichs ein und ruft sich dann für die linke und die rechte Hälfte auf. Gib die Methode in Python oder Pseudocode an (`baum.Einfuegen(x)` ist vorhanden) und nenne das Rekursionsende.
+
+c) In welcher Reihenfolge fügt `MitteEinfuegen([1, …, 7], 0, 6)` die Zahlen ein? Zeichne den entstehenden Baum.
+--- solution
+a) Jede Zahl wird rechter Nachfolger der vorigen: Der Baum **entartet** zu einer Liste mit **7 Ebenen**.
+:::diagram bintree
+1(,2(,3(,4(,5(,6(,7))))))
+:::
+b)
+```python
+def MitteEinfuegen(zahlen, von, bis):
+    if von > bis:                 # Rekursionsende: leerer Bereich
+        return
+    m = (von + bis) // 2
+    baum.Einfuegen(zahlen[m])
+    MitteEinfuegen(zahlen, von, m - 1)
+    MitteEinfuegen(zahlen, m + 1, bis)
+```
+Rekursionsende: Der Bereich ist leer (`von > bis`), dann wird nichts eingefügt.
+
+c) Reihenfolge **4, 2, 1, 3, 6, 5, 7** (das ist die Preorder des Ergebnisses). Der Baum ist vollständig mit **3 Ebenen**:
+:::diagram bintree
+4(2(1,3),6(5,7))
+:::
+::::

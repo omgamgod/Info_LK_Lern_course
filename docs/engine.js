@@ -552,7 +552,7 @@
     const hero = el('section', { class: 'hero' },
       el('span', { class: 'kicker' }, 'Informatik Q12 · 2INF1'),
       el('h1', { html: 'Rekursion <span>&amp;</span> Listen' }),
-      el('p', { class: 'lead' }, 'Von deiner allerersten Zeile Python bis zum Entwurfsmuster Kompositum. Jedes Thema wird zuerst als reine Logik erklärt, dann Zeile für Zeile mit seiner Umsetzung in Python verbunden und schließlich in Python-Blöcken geübt, die deinen Code automatisch prüfen.'),
+      el('p', { class: 'lead' }, 'Von deiner allerersten Zeile Python bis zum geordneten Binärbaum mit dem Entwurfsmuster Kompositum. Jedes Thema wird zuerst als reine Logik erklärt, dann Zeile für Zeile mit seiner Umsetzung in Python verbunden und schließlich in Python-Blöcken geübt, die deinen Code automatisch prüfen.'),
       el('div', { class: 'meta-row' },
         el('span', null, el('b', null, String(C.order.length)), ' Lektionen'),
         el('span', null, el('b', null, String(total)), ' Python-Blöcke'),

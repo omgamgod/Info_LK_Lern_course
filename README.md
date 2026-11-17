@@ -1,19 +1,21 @@
 # Rekursion & Listen
 
 An interactive course for Informatik Q12 (Bavarian Gymnasium, Kurs 2INF1). It covers
-**Python from zero**, **Rekursion** (topic I) and **Listen** (topic II), and ends with
-exam preparation. Every topic is first explained as pure logic, then connected line
+**Python from zero**, **Rekursion** (topic I), **Listen and Stapel** (topic II) and
+**Bäume** (topic III), and ends with exam preparation. Every topic is first explained as pure logic, then connected line
 by line to its Python implementation, and then practised in Python blocks that check
 your code automatically. The course text is in German.
 
 ![Course overview](assets/screenshot-home.png)
 
-- **21 lessons** in five parts
-- **101 Python blocks** with automatic checks, hints and model solutions
-- **22 quizzes**, **56 exam tasks** with model solutions, and a full mock exam
-- **17 interactive visualisations**: call stack, Türme von Hanoi, Levy-C-Kurve,
+- **26 lessons** in six parts
+- **128 Python blocks** with automatic checks, hints and model solutions
+- **29 quizzes**, **105 exam tasks** with model solutions, and two full mock exams
+- **29 interactive visualisations**: call stack, Türme von Hanoi, Levy-C-Kurve,
   Damenproblem, Rucksackproblem, Sudoku, Tiefensuche/Breitensuche, all paths and
-  Handlungsreisender, labyrinth, and queue and list operations
+  Handlungsreisender, labyrinth, queue and list operations, stack operations,
+  Cheese-Champions, the guessing game, and inserting, searching and traversing in
+  ordered binary trees
 - **Step-by-step tracer** for Python code that shows frames, objects and references
   as arrows
 - **Logic ↔ Python bridges**: pseudocode and Python side by side, row by row
@@ -26,8 +28,9 @@ your code automatically. The course text is in German.
 | **0 Start** | 0 So funktioniert der Kurs |
 | **A Python von null** | A1 Programme, Werte und Rechnen · A2 Variablen · A3 Entscheidungen mit if, elif, else · A4 Wiederholungen mit while und for · A5 Funktionen, Parameter und Rückgabewerte · A6 Python-Listen und die Adjazenzmatrix · A7 Klassen und Objekte · A8 Referenzen, None und Ketten von Objekten · A9 Vererbung, Polymorphie und abstrakte Klassen |
 | **B Rekursion** | B1 Das Konzept der Rekursion · B2 Backtracking · B3 Graphen und Tiefensuche · B4 Anwendungen der Tiefensuche: optimale Lösungen |
-| **C Listen** | C1 Die Warteschlange · C2 Trennung von Struktur und Daten · C3 Die einfach verkettete Liste · C4 Entwurfsmuster Kompositum |
-| **D Klausurvorbereitung** | D1 Spickzettel und Glossar · D2 Gemischte Aufgaben · D3 Probeklausur |
+| **C Listen** | C1 Die Warteschlange · C2 Trennung von Struktur und Daten · C3 Die einfach verkettete Liste · C4 Entwurfsmuster Kompositum · C5 Der Stapel |
+| **D Bäume** | D1 Die Datenstruktur Baum · D2 Suchen und Einfügen im geordneten Binärbaum · D3 Binärbaum mit dem Kompositum implementieren |
+| **E Klausurvorbereitung** | E1 Spickzettel und Glossar · E2 Gemischte Aufgaben · E3 Probeklausur 1 · E4 Probeklausur 2 |
 
 <p>
   <img src="assets/screenshot-tiefensuche.png" width="49%" alt="Tiefensuche visualisation">
@@ -67,7 +70,7 @@ Python runtime.
 
 ```
 ├── src/                     sources (edit these)
-│   ├── lessons/*.md         the 21 lessons (Markdown + course blocks, see below)
+│   ├── lessons/*.md         the 26 lessons (Markdown + course blocks, see below)
 │   ├── index.template.html  page layout and all CSS
 │   ├── engine.js            app: navigation, Python blocks, checks, error explanations, progress
 │   ├── viz.js               the interactive visualisations
@@ -122,7 +125,7 @@ Each file in `src/lessons/` starts with YAML front matter:
 ---
 id: b1                  # used in links (#b1) and in "uses"
 num: B1
-part: B                 # 0, A, B, C or D
+part: B                 # 0, A, B, C, D or E
 title: Das Konzept der Rekursion
 short: Rekursion Konzept   # label on the course map
 lead: One paragraph shown under the title.
@@ -148,8 +151,8 @@ more colons (`::::`).
 | `:::exam title="…" points=4` | Exam task, then `--- solution` with the model solution |
 | `:::note`, `:::key`, `:::warn`, `:::tip` | Callout boxes (optional `title="…"`) |
 | `:::bridge title="…"` | Rows `pseudocode \|\| python`; rows starting with `>>` are explanations |
-| `:::diagram kind [wide] caption="…"` | Diagram from a text description. Kinds: `objects`, `classes`, `seq`, `matrix`, `struktogramm`, `graph`, `calltree`, `board` (formats in `diagrams.js`) |
-| `:::viz name` + JSON config | Interactive visualisation: `recstack`, `hanoi`, `levy`, `queens`, `knapsack`, `sudoku`, `graphwalk`, `paths`, `maze`, `listops` |
+| `:::diagram kind [wide] caption="…"` | Diagram from a text description. Kinds: `objects`, `classes`, `seq`, `matrix`, `struktogramm`, `graph`, `calltree`, `board`, `bintree` (formats in `diagrams.js`) |
+| `:::viz name` + JSON config | Interactive visualisation: `recstack`, `hanoi`, `levy`, `queens`, `knapsack`, `sudoku`, `graphwalk`, `paths`, `maze`, `listops`, `stack`, `mice`, `guess`, `bst` |
 | `:::trace title="…"` | Python code for the step-by-step tracer |
 | `:::cols [cards]` | Columns, separated by `--- col` |
 
