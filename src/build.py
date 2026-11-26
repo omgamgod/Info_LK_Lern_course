@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Builds content.js and index.html from the lesson sources."""
 import html
+import importlib
 import json
 import os
 import re
@@ -12,11 +13,15 @@ import yaml
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
 OUT = os.path.join(ROOT, "docs")          # the finished site (GitHub Pages / offline folder)
 BUILD = os.path.join(ROOT, ".build")      # course.json for validate.py
 VENDOR = os.path.join(ROOT, "vendor", "codemirror")
 SUBJECTS_FILE = os.path.join(HERE, "subjects.json")
 CM_FILES = ("codemirror.js", "python.js", "runmode.js", "matchbrackets.js", "LICENSE")
+
+from course_subjects.base import Subject
 
 PHASES = {"logic": "Logik", "bridge": "Brücke", "python": "Python", "exam": "Klausurtraining", "intro": "Überblick"}
 
@@ -77,33 +82,42 @@ def strip_code(t):
 
 
 def load_subjects():
-    """Load course parts and prepare their lesson lists for the generated site."""
+    """Load subject classes in manifest order and prepare them for the generated site."""
     try:
         with open(SUBJECTS_FILE, encoding="utf-8") as f:
-            subjects = json.load(f)
+            manifest = json.load(f)
     except (OSError, json.JSONDecodeError) as e:
         raise SystemExit(f"Cannot read {SUBJECTS_FILE}: {e}")
 
-    if not isinstance(subjects, list):
-        raise SystemExit("subjects.json must contain a list of subjects")
+    if not isinstance(manifest, dict) or not isinstance(manifest.get("subjects"), list):
+        raise SystemExit("subjects.json must contain a 'subjects' list of module names")
 
-    required = ("id", "letter", "title", "color", "desc")
-    seen = set()
-    for i, subject in enumerate(subjects, start=1):
-        if not isinstance(subject, dict):
-            raise SystemExit(f"Subject {i} in subjects.json must be an object")
-        missing = [key for key in required if key not in subject]
-        if missing:
-            raise SystemExit(f"Subject {i} in subjects.json is missing: {', '.join(missing)}")
-        invalid = [key for key in required if not isinstance(subject[key], str) or not subject[key].strip()]
-        if invalid:
-            raise SystemExit(f"Subject {i} in subjects.json must have non-empty text for: {', '.join(invalid)}")
-        subject_id = subject["id"]
-        if subject_id in seen:
-            raise SystemExit(f"Duplicate subject id {subject_id!r} in subjects.json")
-        seen.add(subject_id)
-        subject["id"] = subject_id
-        subject["lessons"] = []
+    subjects = []
+    seen_modules = set()
+    seen_ids = set()
+    for i, module_name in enumerate(manifest["subjects"], start=1):
+        if not isinstance(module_name, str) or not re.fullmatch(r"[a-z][a-z0-9_]*", module_name):
+            raise SystemExit(f"Subject {i} in subjects.json must be a lowercase module name")
+        if module_name in seen_modules:
+            raise SystemExit(f"Duplicate subject module {module_name!r} in subjects.json")
+        seen_modules.add(module_name)
+        try:
+            module = importlib.import_module(f"course_subjects.{module_name}")
+        except ImportError as e:
+            raise SystemExit(f"Cannot load subject module {module_name!r}: {e}")
+        subject_class = getattr(module, "SUBJECT", None)
+        if not isinstance(subject_class, type) or not issubclass(subject_class, Subject):
+            raise SystemExit(f"Subject module {module_name!r} must define SUBJECT as a Subject subclass")
+        if subject_class is Subject or getattr(subject_class, "__abstractmethods__", None):
+            raise SystemExit(f"Subject module {module_name!r} must define a concrete Subject subclass")
+        try:
+            subject = subject_class.to_part()
+        except ValueError as e:
+            raise SystemExit(f"Invalid subject module {module_name!r}: {e}")
+        if subject["id"] in seen_ids:
+            raise SystemExit(f"Duplicate subject id {subject['id']!r} in subject modules")
+        seen_ids.add(subject["id"])
+        subjects.append(subject)
     return subjects
 
 
