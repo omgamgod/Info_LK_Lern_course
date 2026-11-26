@@ -15,16 +15,8 @@ ROOT = os.path.dirname(HERE)
 OUT = os.path.join(ROOT, "docs")          # the finished site (GitHub Pages / offline folder)
 BUILD = os.path.join(ROOT, ".build")      # course.json for validate.py
 VENDOR = os.path.join(ROOT, "vendor", "codemirror")
+SUBJECTS_FILE = os.path.join(HERE, "subjects.json")
 CM_FILES = ("codemirror.js", "python.js", "runmode.js", "matchbrackets.js", "LICENSE")
-
-PARTS = [
-    {"id": "0", "letter": "0", "title": "Start", "color": "#17804b", "desc": "Wie der Kurs funktioniert und was du am Ende können wirst.", "lessons": []},
-    {"id": "A", "letter": "A", "title": "Python von null", "color": "#2445b5", "desc": "Alles, was du in Python brauchst, um die Kursthemen umzusetzen: Werte, Entscheidungen, Schleifen, Funktionen, Listen, Klassen, Referenzen, Vererbung.", "lessons": []},
-    {"id": "B", "letter": "B", "title": "Rekursion", "color": "#6d3fc0", "desc": "Rekursion, Backtracking, Graphen und Tiefensuche, optimale Lösungen mit Tiefensuche.", "lessons": []},
-    {"id": "C", "letter": "C", "title": "Listen", "color": "#c8322b", "desc": "Warteschlange, Trennung von Struktur und Daten, einfach verkettete Liste, das Entwurfsmuster Kompositum und der Stapel.", "lessons": []},
-    {"id": "D", "letter": "D", "title": "Bäume", "color": "#0b7a75", "desc": "Fachbegriffe rund um Bäume, der geordnete Binärbaum, Suchen und Einfügen, Aufwand und die Implementierung mit dem Kompositum.", "lessons": []},
-    {"id": "E", "letter": "E", "title": "Klausurvorbereitung", "color": "#a86a0b", "desc": "Spickzettel, gemischte Aufgaben über alle Themen und zwei komplette Probeklausuren mit Musterlösungen.", "lessons": []},
-]
 
 PHASES = {"logic": "Logik", "bridge": "Brücke", "python": "Python", "exam": "Klausurtraining", "intro": "Überblick"}
 
@@ -82,6 +74,37 @@ def strip_code(t):
     while lines and not lines[-1].strip():
         lines.pop()
     return "\n".join(lines) + "\n"
+
+
+def load_subjects():
+    """Load course parts and prepare their lesson lists for the generated site."""
+    try:
+        with open(SUBJECTS_FILE, encoding="utf-8") as f:
+            subjects = json.load(f)
+    except (OSError, json.JSONDecodeError) as e:
+        raise SystemExit(f"Cannot read {SUBJECTS_FILE}: {e}")
+
+    if not isinstance(subjects, list):
+        raise SystemExit("subjects.json must contain a list of subjects")
+
+    required = ("id", "letter", "title", "color", "desc")
+    seen = set()
+    for i, subject in enumerate(subjects, start=1):
+        if not isinstance(subject, dict):
+            raise SystemExit(f"Subject {i} in subjects.json must be an object")
+        missing = [key for key in required if key not in subject]
+        if missing:
+            raise SystemExit(f"Subject {i} in subjects.json is missing: {', '.join(missing)}")
+        invalid = [key for key in required if not isinstance(subject[key], str) or not subject[key].strip()]
+        if invalid:
+            raise SystemExit(f"Subject {i} in subjects.json must have non-empty text for: {', '.join(invalid)}")
+        subject_id = subject["id"]
+        if subject_id in seen:
+            raise SystemExit(f"Duplicate subject id {subject_id!r} in subjects.json")
+        seen.add(subject_id)
+        subject["id"] = subject_id
+        subject["lessons"] = []
+    return subjects
 
 
 class Builder:
@@ -292,12 +315,13 @@ class Builder:
         ldir = os.path.join(HERE, "lessons")
         files = sorted(f for f in os.listdir(ldir) if f.endswith(".md"))
         lessons = [self.load_lesson(os.path.join(ldir, f)) for f in files]
-        parts = json.loads(json.dumps(PARTS))
+        parts = load_subjects()
+        parts_by_id = {p["id"]: p for p in parts}
         for L in lessons:
             self.lessons[L["id"]] = L
-            for p in parts:
-                if p["id"] == L["part"]:
-                    p["lessons"].append(L["id"])
+            if L["part"] not in parts_by_id:
+                raise SystemExit(f"Unknown part {L['part']!r} in lesson {L['id']}")
+            parts_by_id[L["part"]]["lessons"].append(L["id"])
         for p in parts:
             p["lessons"].sort(key=lambda i: (self.lessons[i]["sort"], self.lessons[i]["num"]))
             self.order += p["lessons"]

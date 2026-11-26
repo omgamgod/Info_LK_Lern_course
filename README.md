@@ -71,6 +71,7 @@ Python runtime.
 ```
 ├── src/                     sources (edit these)
 │   ├── lessons/*.md         the 26 lessons (Markdown + course blocks, see below)
+│   ├── subjects.json        subject/part titles, colors and descriptions
 │   ├── index.template.html  page layout and all CSS
 │   ├── engine.js            app: navigation, Python blocks, checks, error explanations, progress
 │   ├── viz.js               the interactive visualisations
@@ -135,6 +136,10 @@ goals:
   - what the learner can do afterwards
 ---
 ```
+
+The subjects/parts shown in the course navigation are defined in
+[`src/subjects.json`](src/subjects.json), in display order. Each lesson's `part` value
+must match one of its `id` values; lesson membership stays in the lesson files.
 
 The body is Markdown. A section heading can carry a phase tag, which colours it and
 shows up in the table of contents: `## [logic] …`, `## [bridge] …`, `## [python] …`,
