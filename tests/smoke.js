@@ -44,7 +44,7 @@ async function newPage(browser, errors) {
 (async () => {
   const srv = await serve();
   const base = `http://127.0.0.1:${srv.address().port}/index.html`;
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_EXECUTABLE || undefined });
   let failed = 0;
   try {
     if (process.argv.includes('--shot')) {

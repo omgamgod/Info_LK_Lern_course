@@ -1,3 +1,4 @@
+
 # Rekursion & Listen – offline version
 
 Interactive course for Informatik Q12 (Kurs 2INF1): Python from zero, Rekursion, Listen,
@@ -6,7 +7,6 @@ exam tasks and step-by-step visualisations. The course itself is in German.
 
 This folder is the complete course: the unzipped offline package, or the `docs/` folder
 of the GitHub repository. It runs on your own computer and needs no internet connection.
-
 
 ## 1. Requirements
 
@@ -37,22 +37,20 @@ If a version number like `Python 3.12.4` appears, you are ready.
    "command line developer tools" when you type `python3`, click Install. Those tools
    include Python 3 as well.
 
-
 ## 2. What is in the folder
 
-| File / folder                      | What it is                                            |
-|------------------------------------|-------------------------------------------------------|
-| `start.bat`                        | Start file for **Windows** (double-click)             |
-| `start.command`                    | Start file for **macOS** (double-click)               |
-| `start.py`                         | The actual starter: local web server + opens browser  |
-| `index.html`                       | The course page                                       |
-| `content.js`                       | All lessons, exercises, quizzes and exam tasks        |
-| `engine.js`, `viz.js`, `tracer.js`, `diagrams.js` | Course logic, visualisations and diagrams |
-| `pyodide/`                         | Python 3.12 for the browser (runs your code)          |
-| `lib/codemirror/`                  | The code editor                                       |
+| File / folder                                             | What it is                                           |
+| --------------------------------------------------------- | ---------------------------------------------------- |
+| `start.bat`                                             | Start file for **Windows** (double-click)      |
+| `start.command`                                         | Start file for **macOS** (double-click)        |
+| `start.py`                                              | The actual starter: local web server + opens browser |
+| `index.html`                                            | The course page                                      |
+| `content.js`                                            | All lessons, exercises, quizzes and exam tasks       |
+| `engine.js`, `viz.js`, `tracer.js`, `diagrams.js` | Course logic, visualisations and diagrams            |
+| `pyodide/`                                              | Python 3.12 for the browser (runs your code)         |
+| `lib/codemirror/`                                       | The code editor                                      |
 
 Keep all files together in this folder. Do not rename or move the subfolders.
-
 
 ## 3. Start the course
 
@@ -78,7 +76,6 @@ Open a terminal in this folder and run `python3 start.py`
 The course runs at **http://127.0.0.1:8765/**. You can also open this address yourself
 or bookmark it, as long as the start window is open.
 
-
 ## 4. Security warnings on the first start
 
 The start files are not signed by a known developer, so the system may ask once.
@@ -99,7 +96,6 @@ Click **More info**, then **Run anyway**.
 
 After the first time, a double-click works normally.
 
-
 ## 5. Working with the course
 
 - **Stop:** press `Ctrl+C` in the start window, or just close it. The course page
@@ -108,6 +104,7 @@ After the first time, a double-click works normally.
   the start file only opens it in the browser.
 - **Your progress** (solved blocks and your code) is saved in your browser, under the
   address http://127.0.0.1:8765. It stays there as long as you
+
   - use the **same browser**,
   - do not use a private/incognito window,
   - and do not delete the browser's site data.
@@ -115,7 +112,6 @@ After the first time, a double-click works normally.
   Progress in this offline version is separate from the online version of the course.
 - **Sending code to Claude:** the button "Für Claude kopieren" copies the task, your code
   and the check results. Paste that into a chat.
-
 
 ## 6. Starting without the start files
 
@@ -131,20 +127,18 @@ If the start files do not work on your computer, you can start the same server b
    - **macOS / Linux:** `python3 start.py`
 3. If the browser does not open by itself, go to http://127.0.0.1:8765/
 
-
 ## 7. Troubleshooting
 
-| Problem | Cause and fix |
-|---|---|
-| The course shows **"Python konnte nicht starten"** | The page was opened directly from the file (the address starts with `file://`). Browsers block Python there. Always start with the start file and use the `http://127.0.0.1:...` address. |
-| **"start.py not found"** or **"Course files not found"** | The ZIP is not unzipped, or files were moved. Unzip the whole ZIP and start from the unzipped folder. |
-| **"Python 3 was not found"** | Install Python (see section 1). On Windows, tick "Add python.exe to PATH". |
-| Typing `python` on Windows opens the **Microsoft Store** | That is a placeholder, not Python. Install Python from python.org as described in section 1. |
-| The window says **"port 8765 was busy"** | Another program uses that port, so the course runs on 8766 or higher this time. Your progress from 8765 does not show at the new address. Close the other program (or another course window) and start again. |
-| The page does not load | The start window was closed. Start the course again. |
-| The page looks old after an update of the files | Reload without cache: `Ctrl+F5` (Windows) or `Cmd+Shift+R` (macOS). |
-| The code editor is a plain text box without line numbers | The folder `lib/codemirror` is missing. Unzip the complete ZIP again. |
-
+| Problem                                                              | Cause and fix                                                                                                                                                                                                 |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The course shows **"Python konnte nicht starten"**             | The page was opened directly from the file (the address starts with `file://`). Browsers block Python there. Always start with the start file and use the `http://127.0.0.1:...` address.                 |
+| **"start.py not found"** or **"Course files not found"** | The ZIP is not unzipped, or files were moved. Unzip the whole ZIP and start from the unzipped folder.                                                                                                         |
+| **"Python 3 was not found"**                                   | Install Python (see section 1). On Windows, tick "Add python.exe to PATH".                                                                                                                                    |
+| Typing `python` on Windows opens the **Microsoft Store**     | That is a placeholder, not Python. Install Python from python.org as described in section 1.                                                                                                                  |
+| The window says **"port 8765 was busy"**                       | Another program uses that port, so the course runs on 8766 or higher this time. Your progress from 8765 does not show at the new address. Close the other program (or another course window) and start again. |
+| The page does not load                                               | The start window was closed. Start the course again.                                                                                                                                                          |
+| The page looks old after an update of the files                      | Reload without cache: `Ctrl+F5` (Windows) or `Cmd+Shift+R` (macOS).                                                                                                                                       |
+| The code editor is a plain text box without line numbers             | The folder `lib/codemirror` is missing. Unzip the complete ZIP again.                                                                                                                                       |
 
 ## 8. Why is a start file needed?
 
@@ -153,7 +147,6 @@ WebAssembly. Browsers only allow a page to load these files when it comes from a
 server, not when it is opened as a local file. `start.py` starts a tiny web server that
 only your own computer can reach (address 127.0.0.1). It reads the course files from
 this folder and nothing else.
-
 
 ## 9. Third-party software
 
